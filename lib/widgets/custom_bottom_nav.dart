@@ -6,8 +6,9 @@ import '../utils/colors.dart';
 class NavItem {
   final IconData icon;
   final String label;
+  final String? imagePath; // 画像パス（オプション）
 
-  const NavItem({required this.icon, required this.label});
+  const NavItem({required this.icon, required this.label, this.imagePath});
 }
 
 /// カスタムボトムナビゲーションバー
@@ -41,7 +42,7 @@ class CustomBottomNav extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: items.asMap().entries.map((entry) {
@@ -52,6 +53,7 @@ class CustomBottomNav extends StatelessWidget {
                   return _NavButton(
                     icon: item.icon,
                     label: item.label,
+                    imagePath: item.imagePath,
                     isActive: isActive,
                     onTap: () => onTap(index),
                   );
@@ -69,12 +71,14 @@ class CustomBottomNav extends StatelessWidget {
 class _NavButton extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? imagePath;
   final bool isActive;
   final VoidCallback onTap;
 
   const _NavButton({
     required this.icon,
     required this.label,
+    this.imagePath,
     required this.isActive,
     required this.onTap,
   });
@@ -90,64 +94,65 @@ class _NavButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // アイコン部分
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                // フクロウ画像（実装時に画像パスを使用）
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: isActive ? AppColors.gray100 : Colors.transparent,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Image.asset(
-                      'assets/images/owl_character.png',
-                      width: 24,
-                      height: 24,
-                      color: isActive ? null : AppColors.gray300,
-                      colorBlendMode: isActive ? null : BlendMode.saturation,
-                      errorBuilder: (context, error, stackTrace) {
-                        // 画像がない場合はアイコンで代替
-                        return Icon(
-                          icon,
-                          size: 20,
-                          color: isActive
-                              ? AppColors.gray800
-                              : AppColors.gray300,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // 機能アイコン（右下）
-                Positioned(
-                  right: -2,
-                  bottom: -2,
-                  child: Container(
-                    width: 14,
-                    height: 14,
-                    decoration: const BoxDecoration(
-                      color: AppColors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Icon(
-                        icon,
-                        size: 10,
-                        color: isActive ? AppColors.gray800 : AppColors.gray300,
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: imagePath != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: ColorFiltered(
+                        colorFilter: isActive
+                            ? const ColorFilter.mode(
+                                Colors.transparent,
+                                BlendMode.multiply,
+                              )
+                            : ColorFilter.mode(
+                                Colors.grey.withOpacity(0.5),
+                                BlendMode.saturation,
+                              ),
+                        child: Image.asset(
+                          imagePath!,
+                          width: 36,
+                          height: 36,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            // デバッグ用：エラー表示
+                            print('画像読み込みエラー: $imagePath - $error');
+                            return Icon(
+                              icon,
+                              size: 24,
+                              color: isActive
+                                  ? AppColors.gray800
+                                  : AppColors.gray300,
+                            );
+                          },
+                        ),
                       ),
+                    )
+                  : Icon(
+                      icon,
+                      size: 24,
+                      color: isActive ? AppColors.gray800 : AppColors.gray300,
                     ),
-                  ),
-                ),
-              ],
             ),
 
+            const SizedBox(height: 4),
+
+            // ラベル
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w300,
+                color: isActive ? AppColors.gray800 : AppColors.gray400,
+                height: 1.2,
+              ),
+            ),
+
+            const SizedBox(height: 4),
+
             // アクティブインジケーター
-            if (isActive) ...[
-              const SizedBox(height: 8),
+            if (isActive)
               Container(
                 width: 4,
                 height: 4,
@@ -155,8 +160,9 @@ class _NavButton extends StatelessWidget {
                   color: AppColors.gray800,
                   shape: BoxShape.circle,
                 ),
-              ),
-            ],
+              )
+            else
+              const SizedBox(height: 4),
           ],
         ),
       ),

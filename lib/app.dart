@@ -59,10 +59,26 @@ class _MainScreenState extends State<MainScreen> {
 
   // ナビゲーションアイテム
   final List<NavItem> _navItems = const [
-    NavItem(icon: Icons.check_circle_outline, label: 'ホーム'),
-    NavItem(icon: Icons.calendar_today_outlined, label: 'カレンダー'),
-    NavItem(icon: Icons.grid_view_outlined, label: 'メニュー'),
-    NavItem(icon: Icons.more_horiz, label: 'その他'),
+    NavItem(
+      icon: Icons.home_outlined,
+      label: 'ホーム',
+      imagePath: 'assets/images/owl_home.jpeg',
+    ),
+    NavItem(
+      icon: Icons.calendar_today_outlined,
+      label: 'カレンダー',
+      imagePath: 'assets/images/owl_calender.jpeg',
+    ),
+    NavItem(
+      icon: Icons.cleaning_services_outlined,
+      label: 'メニュー',
+      imagePath: 'assets/images/owl_clean.jpeg',
+    ),
+    NavItem(
+      icon: Icons.more_horiz,
+      label: 'その他',
+      imagePath: 'assets/images/owl_other.jpeg',
+    ),
   ];
 
   @override
