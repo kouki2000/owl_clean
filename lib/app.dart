@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'utils/colors.dart';
 import 'utils/constants.dart';
 import 'views/home/home_page.dart';
 import 'widgets/custom_bottom_nav.dart';
+import 'viewmodels/task_viewmodel.dart';
 
 /// アプリのルート
 class CleanUpApp extends StatelessWidget {
@@ -11,29 +13,32 @@ class CleanUpApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppConstants.appName,
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: AppColors.primary,
-        scaffoldBackgroundColor: AppColors.background,
-        fontFamily: '.SF Pro Text', // iOSのデフォルトフォント
-        colorScheme: ColorScheme.light(
-          primary: AppColors.primary,
-          secondary: AppColors.accent,
-          background: AppColors.background,
-          surface: AppColors.white,
-          error: AppColors.error,
+    return ChangeNotifierProvider(
+      create: (context) => TaskViewModel()..initialize(),
+      child: MaterialApp(
+        title: AppConstants.appName,
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          primaryColor: AppColors.primary,
+          scaffoldBackgroundColor: AppColors.background,
+          fontFamily: '.SF Pro Text', // iOSのデフォルトフォント
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary,
+            secondary: AppColors.accent,
+            background: AppColors.background,
+            surface: AppColors.white,
+            error: AppColors.error,
+          ),
+          appBarTheme: const AppBarTheme(
+            elevation: 0,
+            backgroundColor: AppColors.white,
+            systemOverlayStyle: SystemUiOverlayStyle.dark,
+            iconTheme: IconThemeData(color: AppColors.gray800),
+            titleTextStyle: AppTextStyles.h2,
+          ),
         ),
-        appBarTheme: const AppBarTheme(
-          elevation: 0,
-          backgroundColor: AppColors.white,
-          systemOverlayStyle: SystemUiOverlayStyle.dark,
-          iconTheme: IconThemeData(color: AppColors.gray800),
-          titleTextStyle: AppTextStyles.h2,
-        ),
+        home: const MainScreen(),
       ),
-      home: const MainScreen(),
     );
   }
 }
