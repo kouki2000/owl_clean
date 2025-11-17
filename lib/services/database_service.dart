@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/task.dart';
 import '../models/task_category.dart';
+import '../models/garbage_schedule.dart';
 
 /// データベースサービス
 ///
@@ -58,6 +59,18 @@ class DatabaseService {
         name TEXT NOT NULL,
         icon TEXT,
         color TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    // ゴミ出しスケジュールテーブル
+    await db.execute('''
+      CREATE TABLE garbage_schedules (
+        id TEXT PRIMARY KEY,
+        garbage_type TEXT NOT NULL,
+        day_of_week INTEGER NOT NULL,
+        notification_time TEXT,
+        is_enabled INTEGER DEFAULT 1,
         created_at TEXT NOT NULL
       )
     ''');
@@ -228,6 +241,78 @@ class DatabaseService {
       where: 'completed_date BETWEEN ? AND ?',
       whereArgs: [startDate.toIso8601String(), endDate.toIso8601String()],
       orderBy: 'completed_date DESC',
+    );
+  }
+
+  // ==================== ゴミ出しスケジュール関連 ====================
+
+  /// ゴミ出しスケジュールを挿入
+  Future<int> insertGarbageSchedule(GarbageSchedule schedule) async {
+    final db = await database;
+    return await db.insert(
+      'garbage_schedules',
+      schedule.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// すべてのゴミ出しスケジュールを取得
+  Future<List<GarbageSchedule>> getGarbageSchedules() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'garbage_schedules',
+      where: 'is_enabled = 1',
+      orderBy: 'day_of_week ASC',
+    );
+
+    return List.generate(maps.length, (i) => GarbageSchedule.fromMap(maps[i]));
+  }
+
+  /// IDでゴミ出しスケジュールを取得
+  Future<GarbageSchedule?> getGarbageScheduleById(String id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'garbage_schedules',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isEmpty) return null;
+    return GarbageSchedule.fromMap(maps.first);
+  }
+
+  /// 特定の曜日のゴミ出しスケジュールを取得
+  Future<List<GarbageSchedule>> getGarbageSchedulesByDayOfWeek(
+    int dayOfWeek,
+  ) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'garbage_schedules',
+      where: 'day_of_week = ? AND is_enabled = 1',
+      whereArgs: [dayOfWeek],
+    );
+
+    return List.generate(maps.length, (i) => GarbageSchedule.fromMap(maps[i]));
+  }
+
+  /// ゴミ出しスケジュールを更新
+  Future<int> updateGarbageSchedule(GarbageSchedule schedule) async {
+    final db = await database;
+    return await db.update(
+      'garbage_schedules',
+      schedule.toMap(),
+      where: 'id = ?',
+      whereArgs: [schedule.id],
+    );
+  }
+
+  /// ゴミ出しスケジュールを削除
+  Future<int> deleteGarbageSchedule(String id) async {
+    final db = await database;
+    return await db.delete(
+      'garbage_schedules',
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
