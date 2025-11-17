@@ -1,0 +1,132 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'utils/colors.dart';
+import 'utils/constants.dart';
+import 'views/home/home_page.dart';
+import 'widgets/custom_bottom_nav.dart';
+
+/// アプリのルート
+class CleanUpApp extends StatelessWidget {
+  const CleanUpApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: AppConstants.appName,
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primaryColor: AppColors.primary,
+        scaffoldBackgroundColor: AppColors.background,
+        fontFamily: '.SF Pro Text', // iOSのデフォルトフォント
+        colorScheme: ColorScheme.light(
+          primary: AppColors.primary,
+          secondary: AppColors.accent,
+          background: AppColors.background,
+          surface: AppColors.white,
+          error: AppColors.error,
+        ),
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          backgroundColor: AppColors.white,
+          systemOverlayStyle: SystemUiOverlayStyle.dark,
+          iconTheme: IconThemeData(color: AppColors.gray800),
+          titleTextStyle: AppTextStyles.h2,
+        ),
+      ),
+      home: const MainScreen(),
+    );
+  }
+}
+
+/// メイン画面（ナビゲーション付き）
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  int _currentIndex = 0;
+
+  // 各画面（後で実装）
+  final List<Widget> _pages = [
+    const HomePage(),
+    const _PlaceholderPage(title: 'カレンダー'),
+    const _PlaceholderPage(title: 'メニュー'),
+    const _PlaceholderPage(title: 'その他'),
+  ];
+
+  // ナビゲーションアイテム
+  final List<NavItem> _navItems = const [
+    NavItem(icon: Icons.check_circle_outline, label: 'ホーム'),
+    NavItem(icon: Icons.calendar_today_outlined, label: 'カレンダー'),
+    NavItem(icon: Icons.grid_view_outlined, label: 'メニュー'),
+    NavItem(icon: Icons.more_horiz, label: 'その他'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _currentIndex, children: _pages),
+      bottomNavigationBar: CustomBottomNav(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: _navItems,
+      ),
+    );
+  }
+}
+
+/// プレースホルダー画面（実装予定の画面用）
+class _PlaceholderPage extends StatelessWidget {
+  final String title;
+
+  const _PlaceholderPage({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ヘッダー
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.lg,
+              ),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: AppColors.border, width: 1),
+                ),
+              ),
+              child: Row(children: [Text(title, style: AppTextStyles.h1)]),
+            ),
+
+            // コンテンツ
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('🦉', style: TextStyle(fontSize: 64)),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text('$title画面', style: AppTextStyles.h2),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text('実装予定', style: AppTextStyles.caption),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
