@@ -239,7 +239,7 @@ class _CalendarPageState extends State<CalendarPage>
           children: [
             // 選択された日付
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Text(
                 dateFormat.format(viewModel.selectedDate),
                 style: AppTextStyles.label,
@@ -249,19 +249,23 @@ class _CalendarPageState extends State<CalendarPage>
             // タスクリスト
             Expanded(
               child: tasks.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('✨', style: TextStyle(fontSize: 48)),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            'この日のタスクはありません',
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.gray400,
+                  ? SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.xxl),
+                        child: Column(
+                          children: [
+                            const Text('✨', style: TextStyle(fontSize: 32)),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'この日のタスクはありません',
+                              style: AppTextStyles.body.copyWith(
+                                color: AppColors.gray400,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     )
                   : ListView.builder(
@@ -294,7 +298,7 @@ class _CalendarPageState extends State<CalendarPage>
           children: [
             // 選択された日付
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Text(
                 dateFormat.format(viewModel.selectedDate),
                 style: AppTextStyles.label,
@@ -304,35 +308,41 @@ class _CalendarPageState extends State<CalendarPage>
             // ゴミ出しリスト
             Expanded(
               child: schedules.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('🗑️', style: TextStyle(fontSize: 48)),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            'この日のゴミ出しはありません',
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.gray400,
+                  ? SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.xxl),
+                        child: Column(
+                          children: [
+                            const Text('🗑️', style: TextStyle(fontSize: 32)),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'この日のゴミ出しはありません',
+                              style: AppTextStyles.body.copyWith(
+                                color: AppColors.gray400,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
-                          ElevatedButton(
-                            onPressed: () {
-                              // サンプルゴミ出しスケジュールを追加
-                              viewModel.addSampleGarbageSchedules();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.gray800,
-                              foregroundColor: AppColors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.xl,
-                                vertical: AppSpacing.md,
+                            const SizedBox(height: AppSpacing.lg),
+                            ElevatedButton(
+                              onPressed: () {
+                                viewModel.addSampleGarbageSchedules();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.gray800,
+                                foregroundColor: AppColors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.lg,
+                                  vertical: AppSpacing.sm,
+                                ),
+                              ),
+                              child: const Text(
+                                'サンプルを追加',
+                                style: TextStyle(fontSize: 12),
                               ),
                             ),
-                            child: const Text('サンプルを追加'),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     )
                   : ListView.builder(
@@ -353,10 +363,13 @@ class _CalendarPageState extends State<CalendarPage>
   }
 
   /// タスクアイテム
-  Widget _buildTaskItem(Task, CalendarViewModel viewModel) {
+  Widget _buildTaskItem(task, CalendarViewModel viewModel) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       decoration: BoxDecoration(
         color: AppColors.white,
         border: Border.all(color: AppColors.border),
@@ -366,23 +379,23 @@ class _CalendarPageState extends State<CalendarPage>
         children: [
           // チェックボックス
           GestureDetector(
-            onTap: () => viewModel.toggleTaskCompletion(Task.id),
+            onTap: () => viewModel.toggleTaskCompletion(task.id),
             child: Container(
               width: 20,
               height: 20,
               decoration: BoxDecoration(
-                color: Task.isCompleted
+                color: task.isCompleted
                     ? AppColors.gray800
                     : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Task.isCompleted
+                  color: task.isCompleted
                       ? AppColors.gray800
                       : AppColors.gray300,
                   width: 2,
                 ),
               ),
-              child: Task.isCompleted
+              child: task.isCompleted
                   ? const Icon(Icons.check, size: 12, color: AppColors.white)
                   : null,
             ),
@@ -393,18 +406,30 @@ class _CalendarPageState extends State<CalendarPage>
           // タスク名
           Expanded(
             child: Text(
-              Task.title,
+              task.title,
               style: AppTextStyles.body.copyWith(
-                decoration: Task.isCompleted
+                decoration: task.isCompleted
                     ? TextDecoration.lineThrough
                     : TextDecoration.none,
-                color: Task.isCompleted ? AppColors.gray400 : AppColors.gray800,
+                color: task.isCompleted ? AppColors.gray400 : AppColors.gray800,
+                fontSize: 14,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
 
+          const SizedBox(width: AppSpacing.sm),
+
           // 進捗
-          Text('${Task.progress}%', style: AppTextStyles.caption),
+          SizedBox(
+            width: 36,
+            child: Text(
+              '${task.progress}%',
+              style: AppTextStyles.caption.copyWith(fontSize: 11),
+              textAlign: TextAlign.right,
+            ),
+          ),
         ],
       ),
     );
@@ -414,7 +439,10 @@ class _CalendarPageState extends State<CalendarPage>
   Widget _buildGarbageItem(GarbageSchedule schedule) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       decoration: BoxDecoration(
         color: AppColors.white,
         border: Border.all(color: AppColors.border),
@@ -423,20 +451,34 @@ class _CalendarPageState extends State<CalendarPage>
       child: Row(
         children: [
           // アイコン
-          Text(
-            GarbageTypes.getEmoji(schedule.garbageType),
-            style: const TextStyle(fontSize: 24),
+          SizedBox(
+            width: 28,
+            child: Text(
+              GarbageTypes.getEmoji(schedule.garbageType),
+              style: const TextStyle(fontSize: 20),
+              textAlign: TextAlign.center,
+            ),
           ),
 
           const SizedBox(width: AppSpacing.md),
 
           // ゴミの種類
           Expanded(
-            child: Text(schedule.garbageType, style: AppTextStyles.body),
+            child: Text(
+              schedule.garbageType,
+              style: AppTextStyles.body.copyWith(fontSize: 14),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
 
+          const SizedBox(width: AppSpacing.sm),
+
           // 曜日
-          Text('${schedule.dayOfWeekName}曜日', style: AppTextStyles.caption),
+          Text(
+            '${schedule.dayOfWeekName}曜日',
+            style: AppTextStyles.caption.copyWith(fontSize: 11),
+          ),
         ],
       ),
     );

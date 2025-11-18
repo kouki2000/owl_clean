@@ -4,8 +4,11 @@ import 'package:provider/provider.dart';
 import 'utils/colors.dart';
 import 'utils/constants.dart';
 import 'views/home/home_page.dart';
+import 'views/calendar/calendar_page.dart';
+import 'views/menu/task_page.dart';
 import 'widgets/custom_bottom_nav.dart';
 import 'viewmodels/task_viewmodel.dart';
+import 'viewmodels/calendar_viewmodel.dart';
 
 /// アプリのルート
 class CleanUpApp extends StatelessWidget {
@@ -13,8 +16,15 @@ class CleanUpApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => TaskViewModel()..initialize(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (context) => TaskViewModel()..initialize(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => CalendarViewModel()..initialize(),
+        ),
+      ],
       child: MaterialApp(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
@@ -54,11 +64,11 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  // 各画面（後で実装）
+  // 各画面
   final List<Widget> _pages = [
     const HomePage(),
-    const _PlaceholderPage(title: 'カレンダー'),
-    const _PlaceholderPage(title: 'メニュー'),
+    const CalendarPage(),
+    const TaskPage(),
     const _PlaceholderPage(title: 'その他'),
   ];
 
@@ -76,7 +86,7 @@ class _MainScreenState extends State<MainScreen> {
     ),
     NavItem(
       icon: Icons.cleaning_services_outlined,
-      label: 'メニュー',
+      label: 'タスク',
       imagePath: 'assets/images/owl_clean.jpeg',
     ),
     NavItem(
