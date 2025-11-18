@@ -4,8 +4,7 @@ import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../viewmodels/task_viewmodel.dart';
 import '../../models/task.dart';
-import '../../models/task_category.dart';
-import '../../services/database_service.dart';
+import 'add_task_page.dart';
 
 /// タスク管理画面
 class TaskPage extends StatefulWidget {
@@ -16,21 +15,6 @@ class TaskPage extends StatefulWidget {
 }
 
 class _TaskPageState extends State<TaskPage> {
-  List<TaskCategory> _categories = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCategories();
-  }
-
-  Future<void> _loadCategories() async {
-    final categories = await DatabaseService.instance.getCategories();
-    setState(() {
-      _categories = categories;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,7 +46,7 @@ class _TaskPageState extends State<TaskPage> {
                           ),
                           const SizedBox(height: AppSpacing.lg),
                           ElevatedButton.icon(
-                            onPressed: () => _showAddTaskDialog(context),
+                            onPressed: () => _navigateToAddTask(),
                             icon: const Icon(Icons.add, size: 20),
                             label: const Text('タスクを追加'),
                             style: ElevatedButton.styleFrom(
@@ -95,7 +79,7 @@ class _TaskPageState extends State<TaskPage> {
       ),
       // フローティングボタン
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddTaskDialog(context),
+        onPressed: () => _navigateToAddTask(),
         backgroundColor: AppColors.gray800,
         child: const Icon(Icons.add, color: AppColors.white),
       ),
@@ -267,172 +251,10 @@ class _TaskPageState extends State<TaskPage> {
     }
   }
 
-  /// タスク追加ダイアログ
-  void _showAddTaskDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    String? selectedCategoryId;
-    RepeatType selectedRepeatType = RepeatType.none;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('タスクを追加'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // タスク名入力
-                  TextField(
-                    controller: titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'タスク名',
-                      hintText: '例：床掃除',
-                      border: OutlineInputBorder(),
-                    ),
-                    autofocus: true,
-                  ),
-
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // カテゴリ選択
-                  Text(
-                    'カテゴリ',
-                    style: AppTextStyles.body.copyWith(
-                      fontWeight: FontWeight.w400,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
-                    children: _categories.map((category) {
-                      final isSelected = selectedCategoryId == category.id;
-                      return ChoiceChip(
-                        label: Text(
-                          '${category.icon} ${category.name}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isSelected
-                                ? AppColors.white
-                                : AppColors.gray800,
-                          ),
-                        ),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            selectedCategoryId = selected ? category.id : null;
-                          });
-                        },
-                        selectedColor: AppColors.gray800,
-                        backgroundColor: AppColors.gray50,
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // 繰り返し設定
-                  Text(
-                    '繰り返し',
-                    style: AppTextStyles.body.copyWith(
-                      fontWeight: FontWeight.w400,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
-                    children: [
-                      _buildRepeatChip(
-                        '繰り返しなし',
-                        RepeatType.none,
-                        selectedRepeatType,
-                        (type) => setState(() => selectedRepeatType = type),
-                      ),
-                      _buildRepeatChip(
-                        '毎日',
-                        RepeatType.daily,
-                        selectedRepeatType,
-                        (type) => setState(() => selectedRepeatType = type),
-                      ),
-                      _buildRepeatChip(
-                        '毎週',
-                        RepeatType.weekly,
-                        selectedRepeatType,
-                        (type) => setState(() => selectedRepeatType = type),
-                      ),
-                      _buildRepeatChip(
-                        '毎月',
-                        RepeatType.monthly,
-                        selectedRepeatType,
-                        (type) => setState(() => selectedRepeatType = type),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('キャンセル'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (titleController.text.trim().isNotEmpty) {
-                    // タスクを追加
-                    context.read<TaskViewModel>().addTask(
-                      title: titleController.text.trim(),
-                      categoryId: selectedCategoryId,
-                      repeatType: selectedRepeatType,
-                    );
-                    Navigator.of(dialogContext).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('タスクを追加しました'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gray800,
-                  foregroundColor: AppColors.white,
-                ),
-                child: const Text('追加'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  /// 繰り返しチップ
-  Widget _buildRepeatChip(
-    String label,
-    RepeatType type,
-    RepeatType selectedType,
-    Function(RepeatType) onSelected,
-  ) {
-    final isSelected = selectedType == type;
-    return ChoiceChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          color: isSelected ? AppColors.white : AppColors.gray800,
-        ),
-      ),
-      selected: isSelected,
-      onSelected: (selected) => onSelected(type),
-      selectedColor: AppColors.gray800,
-      backgroundColor: AppColors.gray50,
-    );
+  /// タスク追加画面に遷移
+  void _navigateToAddTask() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const AddTaskPage()));
   }
 }

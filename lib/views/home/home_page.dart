@@ -5,6 +5,7 @@ import '../../utils/constants.dart';
 import '../../widgets/owl_character.dart';
 import '../../widgets/task_card.dart';
 import '../../viewmodels/task_viewmodel.dart';
+import '../../widgets/celebration_overlay.dart';
 
 /// ホーム画面
 ///
@@ -18,6 +19,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   OwlMood owlMood = OwlMood.happy;
+  bool _hasShownCelebration = false;
 
   void _toggleTask(String id) async {
     final viewModel = context.read<TaskViewModel>();
@@ -77,6 +79,22 @@ class _HomePageState extends State<HomePage> {
           }
 
           final todayTasks = viewModel.todayTasks;
+          final completedCount =
+              todayTasks.where((task) => task.isCompleted).length;
+          final totalCount = todayTasks.length;
+          final allCompleted = totalCount > 0 && completedCount == totalCount;
+
+          // 全タスク完了時に祝福オーバーレイを表示
+          if (allCompleted && !_hasShownCelebration) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showCelebration(context);
+            });
+          }
+
+          // タスクが未完了になったらフラグをリセット
+          if (!allCompleted) {
+            _hasShownCelebration = false;
+          }
 
           return SafeArea(
             child: Column(
@@ -170,6 +188,22 @@ class _HomePageState extends State<HomePage> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  /// 祝福オーバーレイを表示
+  void _showCelebration(BuildContext context) {
+    setState(() {
+      _hasShownCelebration = true;
+    });
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      builder: (context) => CelebrationOverlay(
+        onClose: () => Navigator.of(context).pop(),
       ),
     );
   }

@@ -1,44 +1,36 @@
 name: owl_clean
-description: エレガントな掃除管理アプリ
+description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.0+1
+version: 0.1.0
 
 environment:
-  sdk: ^3.9.2
+  sdk: '>=3.4.3 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
-  
-  # 状態管理
-  provider: ^6.1.1
-  
-  # ローカルデータベース
   sqflite: ^2.3.0
-  path_provider: ^2.1.1
   path: ^1.8.3
-  
-  # 通知機能
-  flutter_local_notifications: ^16.3.0
-  timezone: ^0.9.2
-  
-  # カレンダー
-  table_calendar: ^3.0.9
-  
-  # 日付・時刻処理
+  provider: ^6.1.1
   intl: ^0.18.1
-  
-  # UUID生成
-  uuid: ^4.2.1
+  table_calendar: ^3.0.9
+  video_player: ^2.8.2  # 追加
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
-  
   assets:
     - assets/images/
+    - assets/videos/  # 追加
+
+fonts:
+  - family: SFProText
+    fonts:
+      - asset: assets/fonts/SF-Pro-Text-Regular.otf
+        weight: 400
+      - asset: assets/fonts/SF-Pro-Text-Light.otf
+        weight: 300
