@@ -5,8 +5,6 @@ import '../repositories/task_repository.dart';
 import '../services/database_service.dart';
 
 /// カレンダーViewModel
-///
-/// カレンダー画面のビジネスロジックと状態管理
 class CalendarViewModel extends ChangeNotifier {
   final TaskRepository _taskRepository = TaskRepository();
   final DatabaseService _dbService = DatabaseService.instance;
@@ -15,6 +13,7 @@ class CalendarViewModel extends ChangeNotifier {
   DateTime _focusedDate = DateTime.now();
 
   List<Task> _tasks = [];
+  Map<String, Set<String>> _dailyCompletions = {}; // 日付 -> 完了タスクIDセット
   List<GarbageSchedule> _garbageSchedules = [];
   bool _isLoading = false;
   String? _error;
@@ -29,14 +28,27 @@ class CalendarViewModel extends ChangeNotifier {
 
   /// 選択された日付のタスクを取得
   List<Task> getTasksForDay(DateTime day) {
-    return _tasks.where((task) {
-      // 繰り返しタスクの場合は毎日/該当する曜日に表示
-      if (task.repeatType != RepeatType.none) {
-        return _shouldShowOnDate(task, day);
-      }
+    final dayOnly = DateTime(day.year, day.month, day.day);
+    final dateKey = _getDateKey(dayOnly);
+    final completedIds = _dailyCompletions[dateKey] ?? {};
 
-      // 単発タスクの場合、未完了なら表示
-      return !task.isCompleted;
+    return _tasks.where((task) {
+      return _isTaskVisibleOnDate(task, dayOnly);
+    }).map((task) {
+      // 日次完了状態を反映したTaskを返す
+      return Task(
+        id: task.id,
+        title: task.title,
+        categoryId: task.categoryId,
+        isCompleted: completedIds.contains(task.id),
+        completedDate: task.completedDate,
+        progress: completedIds.contains(task.id) ? 100 : 0,
+        repeatType: task.repeatType,
+        repeatValue: task.repeatValue,
+        notificationTime: task.notificationTime,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+      );
     }).toList();
   }
 
@@ -57,24 +69,30 @@ class CalendarViewModel extends ChangeNotifier {
   }
 
   /// タスクが指定した日付に表示されるべきかチェック
-  bool _shouldShowOnDate(Task task, DateTime day) {
+  bool _isTaskVisibleOnDate(Task task, DateTime day) {
+    final taskDate = task.createdAt;
+    final taskDateOnly = DateTime(taskDate.year, taskDate.month, taskDate.day);
+
+    if (day.isBefore(taskDateOnly)) return false;
+
     switch (task.repeatType) {
       case RepeatType.daily:
         return true;
       case RepeatType.weekly:
-        // TODO: repeatValueから曜日情報を取得して判定
-        return true;
+        return day.weekday == taskDate.weekday;
       case RepeatType.monthly:
-        // TODO: repeatValueから日付情報を取得して判定
-        return true;
+        return day.day == taskDate.day;
       case RepeatType.none:
-        return false;
+        return day.year == taskDate.year &&
+            day.month == taskDate.month &&
+            day.day == taskDate.day;
     }
   }
 
   /// 初期化
   Future<void> initialize() async {
     await loadTasks();
+    await _loadDailyCompletions();
     await loadGarbageSchedules();
   }
 
@@ -91,6 +109,34 @@ class CalendarViewModel extends ChangeNotifier {
       debugPrint(_error);
     } finally {
       _setLoading(false);
+    }
+  }
+
+  /// 日次完了状態を読み込み
+  Future<void> _loadDailyCompletions() async {
+    try {
+      // 過去30日分の完了状態を読み込み
+      final now = DateTime.now();
+      for (int i = 0; i < 30; i++) {
+        final date = now.subtract(Duration(days: i));
+        final dateKey = _getDateKey(date);
+        final completedIds =
+            await _taskRepository.getCompletedTaskIdsOnDate(date);
+        _dailyCompletions[dateKey] = completedIds.toSet();
+      }
+
+      // 未来30日分も読み込み
+      for (int i = 1; i <= 30; i++) {
+        final date = now.add(Duration(days: i));
+        final dateKey = _getDateKey(date);
+        final completedIds =
+            await _taskRepository.getCompletedTaskIdsOnDate(date);
+        _dailyCompletions[dateKey] = completedIds.toSet();
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('日次完了状態の読み込みに失敗しました: $e');
     }
   }
 
@@ -119,18 +165,23 @@ class CalendarViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// タスクを完了/未完了にする
-  Future<void> toggleTaskCompletion(String id) async {
+  /// タスクを完了/未完了にする（日次）
+  Future<void> toggleTaskCompletion(String id, [DateTime? date]) async {
     _error = null;
+    final targetDate = date ?? _selectedDate;
+    final dateKey = _getDateKey(targetDate);
 
     try {
-      final taskIndex = _tasks.indexWhere((t) => t.id == id);
-      if (taskIndex == -1) return;
+      await _taskRepository.toggleTaskCompletionOnDate(id, targetDate);
 
-      final task = _tasks[taskIndex];
-      final updatedTask = await _taskRepository.toggleTaskCompletion(task);
+      // ローカル状態を更新
+      _dailyCompletions[dateKey] ??= {};
+      if (_dailyCompletions[dateKey]!.contains(id)) {
+        _dailyCompletions[dateKey]!.remove(id);
+      } else {
+        _dailyCompletions[dateKey]!.add(id);
+      }
 
-      _tasks[taskIndex] = updatedTask;
       notifyListeners();
     } catch (e) {
       _error = 'タスクの完了状態の変更に失敗しました: $e';
@@ -190,6 +241,10 @@ class CalendarViewModel extends ChangeNotifier {
       garbageType: GarbageTypes.recyclable,
       dayOfWeek: 3, // 水曜日
     );
+  }
+
+  String _getDateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   /// ローディング状態を設定

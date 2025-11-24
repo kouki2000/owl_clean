@@ -42,6 +42,44 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  /// タスクを削除
+  Future<void> _deleteTask(String id, String title) async {
+    final viewModel = context.read<TaskViewModel>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('削除確認'),
+        content: Text('「$title」を削除しますか？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              '削除',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await viewModel.deleteTask(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('「$title」を削除しました'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -145,32 +183,51 @@ class _HomePageState extends State<HomePage> {
                                     color: AppColors.gray400,
                                   ),
                                 ),
-                                const SizedBox(height: AppSpacing.lg),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    // サンプルデータを追加（開発用）
-                                    viewModel.addSampleData();
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.gray800,
-                                    foregroundColor: AppColors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.xl,
-                                      vertical: AppSpacing.md,
-                                    ),
-                                  ),
-                                  child: const Text('サンプルを追加'),
-                                ),
                               ],
                             ),
                           )
                         else
                           ...todayTasks.map((task) {
-                            return TaskCard(
-                              title: task.title,
-                              isCompleted: task.isCompleted,
-                              progress: task.progress,
-                              onCheckboxTap: () => _toggleTask(task.id),
+                            return Dismissible(
+                              key: Key(task.id),
+                              direction: DismissDirection.endToStart,
+                              confirmDismiss: (direction) async {
+                                return false; // ダイアログで確認するのでfalse
+                              },
+                              onDismissed: (direction) {
+                                // 実際には呼ばれない
+                              },
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding:
+                                    const EdgeInsets.only(right: AppSpacing.xl),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.lg,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.delete_outline,
+                                  color: AppColors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              child: GestureDetector(
+                                onHorizontalDragEnd: (details) {
+                                  if (details.primaryVelocity! < 0) {
+                                    _deleteTask(task.id, task.title);
+                                  }
+                                },
+                                child: TaskCard(
+                                  title: task.title,
+                                  isCompleted: task.isCompleted,
+                                  progress: task.progress,
+                                  onCheckboxTap: () => _toggleTask(task.id),
+                                ),
+                              ),
                             );
                           }).toList(),
 

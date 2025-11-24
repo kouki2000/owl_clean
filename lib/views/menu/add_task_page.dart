@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../viewmodels/task_viewmodel.dart';
+import '../../viewmodels/calendar_viewmodel.dart';
 import '../../models/task.dart';
 
 /// タスク追加画面（フルスクリーン）
@@ -21,13 +22,34 @@ class _AddTaskPageState extends State<AddTaskPage> {
 
   // カテゴリ（全て画像に統一）
   final List<Map<String, dynamic>> _categories = [
-    {'name': 'すべて', 'image': 'assets/images/owl_all.jpeg'},
-    {'name': 'トイレ', 'image': 'assets/images/owl_toilet.jpeg'},
-    {'name': 'キッチン', 'image': 'assets/images/owl_cook.jpeg'},
-    {'name': 'リビング', 'image': 'assets/images/owl_living.jpeg'},
-    {'name': '寝室', 'image': 'assets/images/owl_sleep.jpeg'},
-    {'name': 'お風呂', 'image': 'assets/images/owl_bath.jpeg'},
-    {'name': 'その他', 'image': 'assets/images/owl_other.jpeg'},
+    {
+      'name': 'すべて',
+      'image': 'assets/images/owl_all.jpeg',
+    },
+    {
+      'name': 'トイレ',
+      'image': 'assets/images/owl_toilet.jpeg',
+    },
+    {
+      'name': 'キッチン',
+      'image': 'assets/images/owl_cook.jpeg',
+    },
+    {
+      'name': 'リビング',
+      'image': 'assets/images/owl_living.jpeg',
+    },
+    {
+      'name': '寝室',
+      'image': 'assets/images/owl_sleep.jpeg',
+    },
+    {
+      'name': 'お風呂',
+      'image': 'assets/images/owl_bath.jpeg',
+    },
+    {
+      'name': 'その他',
+      'image': 'assets/images/owl_other.jpeg',
+    },
   ];
 
   // タスクテンプレート
@@ -102,16 +124,15 @@ class _AddTaskPageState extends State<AddTaskPage> {
                   _buildCategorySidebar(),
 
                   // 右側：タスクリスト
-                  Expanded(child: _buildTaskList()),
+                  Expanded(
+                    child: _buildTaskList(),
+                  ),
                 ],
               ),
             ),
 
             // 繰り返し設定
             _buildRepeatSelector(),
-
-            // 追加ボタン
-            _buildAddButton(),
           ],
         ),
       ),
@@ -123,17 +144,15 @@ class _AddTaskPageState extends State<AddTaskPage> {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+        border: Border(
+          bottom: BorderSide(color: AppColors.border, width: 1),
+        ),
       ),
       child: Column(
         children: [
           // タイトル行
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.gray800),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
               Expanded(
                 child: Text(
                   'タスクを追加',
@@ -144,7 +163,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
               TextButton(
                 onPressed: () => _showCustomTaskDialog(),
                 child: Text(
-                  'カスタム',
+                  '自由入力',
                   style: AppTextStyles.body.copyWith(
                     color: AppColors.accent,
                     fontWeight: FontWeight.w400,
@@ -198,7 +217,9 @@ class _AddTaskPageState extends State<AddTaskPage> {
       width: 100,
       decoration: const BoxDecoration(
         color: AppColors.gray50,
-        border: Border(right: BorderSide(color: AppColors.border, width: 1)),
+        border: Border(
+          right: BorderSide(color: AppColors.border, width: 1),
+        ),
       ),
       child: ListView.builder(
         itemCount: _categories.length,
@@ -244,7 +265,10 @@ class _AddTaskPageState extends State<AddTaskPage> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(imagePath, fit: BoxFit.cover),
+                      child: Image.asset(
+                        imagePath,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -252,9 +276,8 @@ class _AddTaskPageState extends State<AddTaskPage> {
                     category['name'],
                     style: AppTextStyles.caption.copyWith(
                       fontSize: 11,
-                      fontWeight: isSelected
-                          ? FontWeight.w400
-                          : FontWeight.w300,
+                      fontWeight:
+                          isSelected ? FontWeight.w400 : FontWeight.w300,
                       color: isSelected ? AppColors.gray800 : AppColors.gray600,
                     ),
                   ),
@@ -284,11 +307,9 @@ class _AddTaskPageState extends State<AddTaskPage> {
     // 検索フィルター
     if (_searchQuery.isNotEmpty) {
       tasks = tasks
-          .where(
-            (task) =>
-                task['name']!.toLowerCase().contains(_searchQuery) ||
-                task['subtitle']!.toLowerCase().contains(_searchQuery),
-          )
+          .where((task) =>
+              task['name']!.toLowerCase().contains(_searchQuery) ||
+              task['subtitle']!.toLowerCase().contains(_searchQuery))
           .toList();
     }
 
@@ -316,13 +337,19 @@ class _AddTaskPageState extends State<AddTaskPage> {
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
-        return _buildTaskItem(name: task['name']!, subtitle: task['subtitle']!);
+        return _buildTaskItem(
+          name: task['name']!,
+          subtitle: task['subtitle']!,
+        );
       },
     );
   }
 
   /// タスクアイテム
-  Widget _buildTaskItem({required String name, required String subtitle}) {
+  Widget _buildTaskItem({
+    required String name,
+    required String subtitle,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
@@ -337,11 +364,15 @@ class _AddTaskPageState extends State<AddTaskPage> {
         ),
         title: Text(
           name,
-          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w400),
+          style: AppTextStyles.body.copyWith(
+            fontWeight: FontWeight.w400,
+          ),
         ),
         subtitle: Text(
           subtitle,
-          style: AppTextStyles.caption.copyWith(fontSize: 12),
+          style: AppTextStyles.caption.copyWith(
+            fontSize: 12,
+          ),
         ),
         trailing: Container(
           width: 32,
@@ -350,7 +381,11 @@ class _AddTaskPageState extends State<AddTaskPage> {
             color: AppColors.gray50,
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.add, color: AppColors.gray800, size: 20),
+          child: const Icon(
+            Icons.add,
+            color: AppColors.gray800,
+            size: 20,
+          ),
         ),
         onTap: () => _addTask(name),
       ),
@@ -365,7 +400,9 @@ class _AddTaskPageState extends State<AddTaskPage> {
         vertical: AppSpacing.md,
       ),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+        border: Border(
+          top: BorderSide(color: AppColors.border, width: 1),
+        ),
       ),
       child: Row(
         children: [
@@ -427,37 +464,19 @@ class _AddTaskPageState extends State<AddTaskPage> {
     );
   }
 
-  /// 追加ボタン
-  Widget _buildAddButton() {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.gray800,
-            foregroundColor: AppColors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: const Text(
-            '閉じる',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// タスクを追加
+  /// タスクを追加（カレンダーとも同期）
   void _addTask(String taskName) {
-    context.read<TaskViewModel>().addTask(
+    final taskViewModel = context.read<TaskViewModel>();
+    final calendarViewModel = context.read<CalendarViewModel>();
+
+    // タスクを追加
+    taskViewModel.addTask(
       title: taskName,
       repeatType: _selectedRepeatType,
     );
+
+    // カレンダーも再読み込み（同期）
+    calendarViewModel.loadTasks();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -475,7 +494,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('カスタムタスク'),
+        title: const Text('自由入力'),
         content: TextField(
           controller: titleController,
           decoration: const InputDecoration(

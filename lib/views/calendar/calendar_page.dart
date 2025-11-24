@@ -5,7 +5,8 @@ import 'package:intl/intl.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../viewmodels/calendar_viewmodel.dart';
-import '../../models/garbage_schedule.dart';
+import '../../viewmodels/task_viewmodel.dart';
+import '../../models/task.dart';
 
 /// カレンダー画面
 class CalendarPage extends StatefulWidget {
@@ -17,18 +18,15 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage>
     with SingleTickerProviderStateMixin {
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
   late TabController _tabController;
-  int _currentTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _selectedDay = _focusedDay;
     _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      setState(() {
-        _currentTabIndex = _tabController.index;
-      });
-    });
   }
 
   @override
@@ -44,20 +42,24 @@ class _CalendarPageState extends State<CalendarPage>
       body: SafeArea(
         child: Column(
           children: [
-            // ヘッダー
+            // ヘッダー（固定）
             _buildHeader(),
 
-            // タブバー
+            // タブ（固定）
             _buildTabBar(),
 
-            // カレンダー
-            _buildCalendar(),
-
-            // タブビュー（選択された日付のコンテンツ）
+            // スクロール可能なコンテンツ
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [_buildCleaningTab(), _buildGarbageTab()],
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // カレンダー
+                    _buildCalendar(),
+
+                    // 選択した日のタスク一覧
+                    _buildTaskList(),
+                  ],
+                ),
               ),
             ),
           ],
@@ -76,78 +78,60 @@ class _CalendarPageState extends State<CalendarPage>
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
-      child: Row(children: [Text('カレンダー', style: AppTextStyles.h1)]),
+      child: Row(
+        children: [
+          Text('カレンダー', style: AppTextStyles.h1),
+        ],
+      ),
     );
   }
 
   /// タブバー
   Widget _buildTabBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.md,
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
-      child: Container(
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.gray50,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: TabBar(
-          controller: _tabController,
-          indicator: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(6),
-            boxShadow: AppShadows.light,
-          ),
-          indicatorPadding: const EdgeInsets.all(4),
-          dividerColor: Colors.transparent,
-          labelColor: AppColors.gray800,
-          unselectedLabelColor: AppColors.gray400,
-          labelStyle: AppTextStyles.body.copyWith(
-            fontWeight: FontWeight.w400,
-            fontSize: 14,
-          ),
-          unselectedLabelStyle: AppTextStyles.body.copyWith(
-            fontWeight: FontWeight.w300,
-            fontSize: 14,
-          ),
-          tabs: const [
-            Tab(text: '掃除'),
-            Tab(text: 'ゴミ出し'),
-          ],
-        ),
+      child: TabBar(
+        controller: _tabController,
+        labelColor: AppColors.gray800,
+        unselectedLabelColor: AppColors.gray400,
+        labelStyle: AppTextStyles.body.copyWith(fontWeight: FontWeight.w400),
+        unselectedLabelStyle:
+            AppTextStyles.body.copyWith(fontWeight: FontWeight.w300),
+        indicatorColor: AppColors.gray800,
+        indicatorWeight: 2,
+        tabs: const [
+          Tab(text: '掃除'),
+          Tab(text: 'ゴミ出し'),
+        ],
       ),
     );
   }
 
   /// カレンダー
   Widget _buildCalendar() {
-    return Consumer<CalendarViewModel>(
+    return Consumer<TaskViewModel>(
       builder: (context, viewModel, child) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: const BoxDecoration(
+            border:
+                Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+          ),
           child: TableCalendar(
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
-            focusedDay: viewModel.focusedDate,
-            selectedDayPredicate: (day) {
-              return isSameDay(viewModel.selectedDate, day);
-            },
-            onDaySelected: (selectedDay, focusedDay) {
-              viewModel.selectDate(selectedDay);
-              viewModel.updateFocusedDate(focusedDay);
-            },
-            onPageChanged: (focusedDay) {
-              viewModel.updateFocusedDate(focusedDay);
-            },
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             calendarFormat: CalendarFormat.month,
             startingDayOfWeek: StartingDayOfWeek.sunday,
+            locale: 'ja_JP',
             headerStyle: HeaderStyle(
               formatButtonVisible: false,
               titleCentered: true,
-              titleTextStyle: AppTextStyles.h3.copyWith(
-                fontWeight: FontWeight.w300,
+              titleTextStyle: AppTextStyles.body.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
               ),
               leftChevronIcon: const Icon(
                 Icons.chevron_left,
@@ -159,203 +143,112 @@ class _CalendarPageState extends State<CalendarPage>
               ),
             ),
             daysOfWeekStyle: DaysOfWeekStyle(
-              weekdayStyle: AppTextStyles.caption.copyWith(
-                fontWeight: FontWeight.w300,
-              ),
-              weekendStyle: AppTextStyles.caption.copyWith(
-                fontWeight: FontWeight.w300,
-              ),
+              weekdayStyle: AppTextStyles.caption.copyWith(fontSize: 12),
+              weekendStyle: AppTextStyles.caption.copyWith(fontSize: 12),
             ),
             calendarStyle: CalendarStyle(
-              defaultTextStyle: AppTextStyles.body.copyWith(
-                fontWeight: FontWeight.w300,
-              ),
-              weekendTextStyle: AppTextStyles.body.copyWith(
-                fontWeight: FontWeight.w300,
-              ),
-              selectedDecoration: const BoxDecoration(
-                color: AppColors.gray800,
-                shape: BoxShape.circle,
-              ),
-              selectedTextStyle: AppTextStyles.body.copyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.w400,
-              ),
               todayDecoration: BoxDecoration(
+                color: AppColors.gray800,
+                shape: BoxShape.circle,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: AppColors.gray800,
+                shape: BoxShape.circle,
+              ),
+              defaultTextStyle: AppTextStyles.body.copyWith(fontSize: 14),
+              weekendTextStyle: AppTextStyles.body.copyWith(fontSize: 14),
+              outsideTextStyle: AppTextStyles.body.copyWith(
+                fontSize: 14,
                 color: AppColors.gray300,
-                shape: BoxShape.circle,
               ),
-              todayTextStyle: AppTextStyles.body.copyWith(
-                color: AppColors.gray800,
-                fontWeight: FontWeight.w400,
-              ),
-              outsideDaysVisible: false,
               markerDecoration: const BoxDecoration(
-                color: AppColors.gray800,
+                color: AppColors.accent,
                 shape: BoxShape.circle,
               ),
-              markerSize: 4,
+              markersMaxCount: 3,
             ),
-            calendarBuilders: CalendarBuilders(
-              // マーカー（イベントがある日に小さな点を表示）
-              markerBuilder: (context, date, events) {
-                final hasEvents = viewModel.hasEventsOnDay(
-                  date,
-                  includeGarbage: _currentTabIndex == 1,
-                );
-
-                if (hasEvents) {
-                  return Positioned(
-                    bottom: 4,
-                    child: Container(
-                      width: 4,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isSameDay(date, viewModel.selectedDate)
-                            ? AppColors.white
-                            : AppColors.gray800,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  );
-                }
-                return null;
-              },
-            ),
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+            },
+            onPageChanged: (focusedDay) {
+              _focusedDay = focusedDay;
+            },
+            // タスクがある日にマーカーを表示
+            eventLoader: (day) {
+              return _getTasksForDay(day, viewModel.tasks);
+            },
           ),
         );
       },
     );
   }
 
-  /// 掃除タブ
-  Widget _buildCleaningTab() {
-    return Consumer<CalendarViewModel>(
+  /// 選択した日のタスク一覧
+  Widget _buildTaskList() {
+    final selectedDateStr = _selectedDay != null
+        ? DateFormat('M月d日(E)', 'ja_JP').format(_selectedDay!)
+        : '';
+
+    return Consumer<TaskViewModel>(
       builder: (context, viewModel, child) {
-        final tasks = viewModel.getTasksForDay(viewModel.selectedDate);
-        final dateFormat = DateFormat('M月d日(E)', 'ja_JP');
+        final tasksForSelectedDay =
+            _getTasksForDay(_selectedDay!, viewModel.tasks);
 
         return Column(
           children: [
-            // 選択された日付
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(
-                dateFormat.format(viewModel.selectedDate),
-                style: AppTextStyles.label,
+            // 日付ヘッダー
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: const BoxDecoration(
+                color: AppColors.gray50,
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    selectedDateStr,
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${tasksForSelectedDay.length}件のタスク',
+                    style: AppTextStyles.caption,
+                  ),
+                ],
               ),
             ),
 
-            // タスクリスト
-            Expanded(
-              child: tasks.isEmpty
-                  ? SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.xxl),
-                        child: Column(
-                          children: [
-                            const Text('✨', style: TextStyle(fontSize: 32)),
-                            const SizedBox(height: AppSpacing.sm),
-                            Text(
-                              'この日のタスクはありません',
-                              style: AppTextStyles.body.copyWith(
-                                color: AppColors.gray400,
-                                fontSize: 13,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+            // タスク一覧
+            tasksForSelectedDay.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xxl),
+                    child: Column(
+                      children: [
+                        const Text('📅', style: TextStyle(fontSize: 48)),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          'この日のタスクはありません',
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.gray400,
+                          ),
                         ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                      ),
-                      itemCount: tasks.length,
-                      itemBuilder: (context, index) {
-                        final task = tasks[index];
-                        return _buildTaskItem(task, viewModel);
-                      },
+                      ],
                     ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// ゴミ出しタブ
-  Widget _buildGarbageTab() {
-    return Consumer<CalendarViewModel>(
-      builder: (context, viewModel, child) {
-        final schedules = viewModel.getGarbageSchedulesForDay(
-          viewModel.selectedDate,
-        );
-        final dateFormat = DateFormat('M月d日(E)', 'ja_JP');
-
-        return Column(
-          children: [
-            // 選択された日付
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(
-                dateFormat.format(viewModel.selectedDate),
-                style: AppTextStyles.label,
-              ),
-            ),
-
-            // ゴミ出しリスト
-            Expanded(
-              child: schedules.isEmpty
-                  ? SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.xxl),
-                        child: Column(
-                          children: [
-                            const Text('🗑️', style: TextStyle(fontSize: 32)),
-                            const SizedBox(height: AppSpacing.sm),
-                            Text(
-                              'この日のゴミ出しはありません',
-                              style: AppTextStyles.body.copyWith(
-                                color: AppColors.gray400,
-                                fontSize: 13,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
-                            ElevatedButton(
-                              onPressed: () {
-                                viewModel.addSampleGarbageSchedules();
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.gray800,
-                                foregroundColor: AppColors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.lg,
-                                  vertical: AppSpacing.sm,
-                                ),
-                              ),
-                              child: const Text(
-                                'サンプルを追加',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                      ),
-                      itemCount: schedules.length,
-                      itemBuilder: (context, index) {
-                        final schedule = schedules[index];
-                        return _buildGarbageItem(schedule);
-                      },
-                    ),
-            ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    itemCount: tasksForSelectedDay.length,
+                    itemBuilder: (context, index) {
+                      final task = tasksForSelectedDay[index];
+                      return _buildTaskItem(task);
+                    },
+                  ),
           ],
         );
       },
@@ -363,15 +256,12 @@ class _CalendarPageState extends State<CalendarPage>
   }
 
   /// タスクアイテム
-  Widget _buildTaskItem(task, CalendarViewModel viewModel) {
+  Widget _buildTaskItem(Task task) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: task.isCompleted ? AppColors.gray50 : AppColors.white,
         border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(8),
       ),
@@ -379,55 +269,133 @@ class _CalendarPageState extends State<CalendarPage>
         children: [
           // チェックボックス
           GestureDetector(
-            onTap: () => viewModel.toggleTaskCompletion(task.id),
+            onTap: () {
+              context.read<TaskViewModel>().toggleTaskCompletion(task.id);
+            },
             child: Container(
-              width: 20,
-              height: 20,
+              width: 24,
+              height: 24,
               decoration: BoxDecoration(
-                color: task.isCompleted
-                    ? AppColors.gray800
-                    : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: task.isCompleted
-                      ? AppColors.gray800
-                      : AppColors.gray300,
+                  color:
+                      task.isCompleted ? AppColors.gray800 : AppColors.gray300,
                   width: 2,
                 ),
+                color:
+                    task.isCompleted ? AppColors.gray800 : Colors.transparent,
               ),
               child: task.isCompleted
-                  ? const Icon(Icons.check, size: 12, color: AppColors.white)
+                  ? const Icon(
+                      Icons.check,
+                      size: 16,
+                      color: AppColors.white,
+                    )
                   : null,
             ),
           ),
 
           const SizedBox(width: AppSpacing.md),
 
-          // タスク名
+          // タスク情報
           Expanded(
-            child: Text(
-              task.title,
-              style: AppTextStyles.body.copyWith(
-                decoration: task.isCompleted
-                    ? TextDecoration.lineThrough
-                    : TextDecoration.none,
-                color: task.isCompleted ? AppColors.gray400 : AppColors.gray800,
-                fontSize: 14,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: AppTextStyles.body.copyWith(
+                    decoration:
+                        task.isCompleted ? TextDecoration.lineThrough : null,
+                    color: task.isCompleted
+                        ? AppColors.gray400
+                        : AppColors.gray800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    _buildRepeatBadge(task.repeatType),
+                    if (task.isCompleted) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        '完了',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.gray400,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(width: AppSpacing.sm),
-
-          // 進捗
-          SizedBox(
-            width: 36,
-            child: Text(
+          // 進捗率
+          if (!task.isCompleted)
+            Text(
               '${task.progress}%',
-              style: AppTextStyles.caption.copyWith(fontSize: 11),
-              textAlign: TextAlign.right,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.gray400,
+                fontSize: 12,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 繰り返しバッジ
+  Widget _buildRepeatBadge(RepeatType repeatType) {
+    String text;
+    IconData icon;
+    Color color;
+
+    switch (repeatType) {
+      case RepeatType.daily:
+        text = '毎日';
+        icon = Icons.refresh;
+        color = AppColors.accent;
+        break;
+      case RepeatType.weekly:
+        text = '毎週';
+        icon = Icons.calendar_today;
+        color = Colors.blue;
+        break;
+      case RepeatType.monthly:
+        text = '毎月';
+        icon = Icons.calendar_month;
+        color = Colors.purple;
+        break;
+      case RepeatType.none:
+      default:
+        text = '1回のみ';
+        icon = Icons.event;
+        color = AppColors.gray400;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: AppTextStyles.caption.copyWith(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],
@@ -435,52 +403,34 @@ class _CalendarPageState extends State<CalendarPage>
     );
   }
 
-  /// ゴミ出しアイテム
-  Widget _buildGarbageItem(GarbageSchedule schedule) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          // アイコン
-          SizedBox(
-            width: 28,
-            child: Text(
-              GarbageTypes.getEmoji(schedule.garbageType),
-              style: const TextStyle(fontSize: 20),
-              textAlign: TextAlign.center,
-            ),
-          ),
+  /// 指定した日のタスクを取得
+  List<Task> _getTasksForDay(DateTime day, List<Task> allTasks) {
+    return allTasks.where((task) {
+      final taskDate = task.createdAt;
 
-          const SizedBox(width: AppSpacing.md),
+      switch (task.repeatType) {
+        case RepeatType.daily:
+          // 毎日：タスク作成日以降の全ての日
+          return !day
+              .isBefore(DateTime(taskDate.year, taskDate.month, taskDate.day));
 
-          // ゴミの種類
-          Expanded(
-            child: Text(
-              schedule.garbageType,
-              style: AppTextStyles.body.copyWith(fontSize: 14),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
+        case RepeatType.weekly:
+          // 毎週：同じ曜日
+          return day.weekday == taskDate.weekday &&
+              !day.isBefore(
+                  DateTime(taskDate.year, taskDate.month, taskDate.day));
 
-          const SizedBox(width: AppSpacing.sm),
+        case RepeatType.monthly:
+          // 毎月：同じ日付
+          return day.day == taskDate.day &&
+              !day.isBefore(
+                  DateTime(taskDate.year, taskDate.month, taskDate.day));
 
-          // 曜日
-          Text(
-            '${schedule.dayOfWeekName}曜日',
-            style: AppTextStyles.caption.copyWith(fontSize: 11),
-          ),
-        ],
-      ),
-    );
+        case RepeatType.none:
+        default:
+          // 1回のみ：作成日のみ
+          return isSameDay(day, taskDate);
+      }
+    }).toList();
   }
 }

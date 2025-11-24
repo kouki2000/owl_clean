@@ -5,7 +5,7 @@ import 'utils/colors.dart';
 import 'utils/constants.dart';
 import 'views/home/home_page.dart';
 import 'views/calendar/calendar_page.dart';
-import 'views/menu/task_page.dart';
+import 'views/menu/add_task_page.dart';
 import 'widgets/custom_bottom_nav.dart';
 import 'viewmodels/task_viewmodel.dart';
 import 'viewmodels/calendar_viewmodel.dart';
@@ -68,7 +68,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _pages = [
     const HomePage(),
     const CalendarPage(),
-    const TaskPage(),
+    const AddTaskPage(), // タスク追加画面を直接表示
     const _PlaceholderPage(title: 'その他'),
   ];
 
