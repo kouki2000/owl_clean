@@ -111,7 +111,7 @@ class _CalendarPageState extends State<CalendarPage>
 
   /// カレンダー
   Widget _buildCalendar() {
-    return Consumer<TaskViewModel>(
+    return Consumer<CalendarViewModel>(
       builder: (context, viewModel, child) {
         return Container(
           decoration: const BoxDecoration(
@@ -172,13 +172,15 @@ class _CalendarPageState extends State<CalendarPage>
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
               });
+              // 選択日が変わったら完了状態を再読み込み
+              context.read<CalendarViewModel>().selectDate(selectedDay);
             },
             onPageChanged: (focusedDay) {
               _focusedDay = focusedDay;
             },
             // タスクがある日にマーカーを表示
             eventLoader: (day) {
-              return _getTasksForDay(day, viewModel.tasks);
+              return viewModel.hasEventsOnDay(day) ? ['event'] : [];
             },
           ),
         );
@@ -192,10 +194,9 @@ class _CalendarPageState extends State<CalendarPage>
         ? DateFormat('M月d日(E)', 'ja_JP').format(_selectedDay!)
         : '';
 
-    return Consumer<TaskViewModel>(
+    return Consumer<CalendarViewModel>(
       builder: (context, viewModel, child) {
-        final tasksForSelectedDay =
-            _getTasksForDay(_selectedDay!, viewModel.tasks);
+        final tasksForSelectedDay = viewModel.getTasksForDay(_selectedDay!);
 
         return Column(
           children: [
@@ -246,7 +247,7 @@ class _CalendarPageState extends State<CalendarPage>
                     itemCount: tasksForSelectedDay.length,
                     itemBuilder: (context, index) {
                       final task = tasksForSelectedDay[index];
-                      return _buildTaskItem(task);
+                      return _buildTaskItem(task, viewModel);
                     },
                   ),
           ],
@@ -255,8 +256,8 @@ class _CalendarPageState extends State<CalendarPage>
     );
   }
 
-  /// タスクアイテム
-  Widget _buildTaskItem(Task task) {
+  /// タスクアイテム（削除ボタン付き）
+  Widget _buildTaskItem(Task task, CalendarViewModel viewModel) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -270,7 +271,7 @@ class _CalendarPageState extends State<CalendarPage>
           // チェックボックス
           GestureDetector(
             onTap: () {
-              context.read<TaskViewModel>().toggleTaskCompletion(task.id);
+              viewModel.toggleTaskCompletion(task.id, _selectedDay);
             },
             child: Container(
               width: 24,
@@ -332,18 +333,60 @@ class _CalendarPageState extends State<CalendarPage>
             ),
           ),
 
-          // 進捗率
-          if (!task.isCompleted)
-            Text(
-              '${task.progress}%',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.gray400,
-                fontSize: 12,
-              ),
+          const SizedBox(width: AppSpacing.sm),
+
+          // 削除ボタン
+          IconButton(
+            icon: const Icon(
+              Icons.delete_outline,
+              color: AppColors.gray400,
+              size: 20,
             ),
+            onPressed: () => _deleteTask(task),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
         ],
       ),
     );
+  }
+
+  /// タスクを削除
+  Future<void> _deleteTask(Task task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('削除確認'),
+        content: Text('「${task.title}」を削除しますか？\n\n繰り返しタスクの場合、すべての予定が削除されます。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              '削除',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await context.read<TaskViewModel>().deleteTask(task.id);
+      await context.read<CalendarViewModel>().loadTasks();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('「${task.title}」を削除しました'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   /// 繰り返しバッジ
@@ -369,6 +412,10 @@ class _CalendarPageState extends State<CalendarPage>
         color = Colors.purple;
         break;
       case RepeatType.none:
+        text = '1回のみ';
+        icon = Icons.event;
+        color = AppColors.gray400;
+        break;
       default:
         text = '1回のみ';
         icon = Icons.event;
@@ -401,36 +448,5 @@ class _CalendarPageState extends State<CalendarPage>
         ],
       ),
     );
-  }
-
-  /// 指定した日のタスクを取得
-  List<Task> _getTasksForDay(DateTime day, List<Task> allTasks) {
-    return allTasks.where((task) {
-      final taskDate = task.createdAt;
-
-      switch (task.repeatType) {
-        case RepeatType.daily:
-          // 毎日：タスク作成日以降の全ての日
-          return !day
-              .isBefore(DateTime(taskDate.year, taskDate.month, taskDate.day));
-
-        case RepeatType.weekly:
-          // 毎週：同じ曜日
-          return day.weekday == taskDate.weekday &&
-              !day.isBefore(
-                  DateTime(taskDate.year, taskDate.month, taskDate.day));
-
-        case RepeatType.monthly:
-          // 毎月：同じ日付
-          return day.day == taskDate.day &&
-              !day.isBefore(
-                  DateTime(taskDate.year, taskDate.month, taskDate.day));
-
-        case RepeatType.none:
-        default:
-          // 1回のみ：作成日のみ
-          return isSameDay(day, taskDate);
-      }
-    }).toList();
   }
 }

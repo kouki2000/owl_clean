@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'utils/colors.dart';
 import 'utils/constants.dart';
 import 'views/home/home_page.dart';
@@ -47,6 +48,16 @@ class CleanUpApp extends StatelessWidget {
             titleTextStyle: AppTextStyles.h2,
           ),
         ),
+        // ローカライゼーション設定を追加
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('ja', 'JP'),
+        ],
+        locale: const Locale('ja', 'JP'),
         home: const MainScreen(),
       ),
     );
@@ -148,7 +159,7 @@ class _PlaceholderPage extends StatelessWidget {
                   children: [
                     const Text('🦉', style: TextStyle(fontSize: 64)),
                     const SizedBox(height: AppSpacing.lg),
-                    Text('$title画面', style: AppTextStyles.h2),
+                    Text('${title}画面', style: AppTextStyles.h2),
                     const SizedBox(height: AppSpacing.sm),
                     Text('実装予定', style: AppTextStyles.caption),
                   ],

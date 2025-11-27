@@ -88,6 +88,7 @@ class TaskViewModel extends ChangeNotifier {
     RepeatType repeatType = RepeatType.none,
     String? repeatValue,
     DateTime? notificationTime,
+    DateTime? createdAt, // 追加
   }) async {
     _setLoading(true);
     _error = null;
@@ -99,6 +100,7 @@ class TaskViewModel extends ChangeNotifier {
         repeatType: repeatType,
         repeatValue: repeatValue,
         notificationTime: notificationTime,
+        createdAt: createdAt, // 追加
       );
 
       _tasks.insert(0, task);

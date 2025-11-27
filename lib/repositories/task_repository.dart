@@ -13,6 +13,7 @@ class TaskRepository {
     RepeatType repeatType = RepeatType.none,
     String? repeatValue,
     DateTime? notificationTime,
+    DateTime? createdAt, // 追加
   }) async {
     final now = DateTime.now();
     final task = Task(
@@ -22,7 +23,7 @@ class TaskRepository {
       repeatType: repeatType,
       repeatValue: repeatValue,
       notificationTime: notificationTime,
-      createdAt: now,
+      createdAt: createdAt ?? now, // 指定された開始日または現在時刻
       updatedAt: now,
     );
 

@@ -4,17 +4,107 @@ import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../viewmodels/task_viewmodel.dart';
 import '../../models/task.dart';
-import 'add_task_page.dart';
+import 'task_detail_page.dart';
 
-/// タスク管理画面
-class TaskPage extends StatefulWidget {
-  const TaskPage({super.key});
+/// タスク追加画面（フルスクリーン）
+class AddTaskPage extends StatefulWidget {
+  const AddTaskPage({super.key});
 
   @override
-  State<TaskPage> createState() => _TaskPageState();
+  State<AddTaskPage> createState() => _AddTaskPageState();
 }
 
-class _TaskPageState extends State<TaskPage> {
+class _AddTaskPageState extends State<AddTaskPage> {
+  int _selectedCategoryIndex = 0;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  // カテゴリ（全て画像に統一）
+  final List<Map<String, dynamic>> _categories = [
+    {
+      'name': 'すべて',
+      'image': 'assets/images/owl_all.jpeg',
+    },
+    {
+      'name': 'トイレ',
+      'image': 'assets/images/owl_toilet.jpeg',
+    },
+    {
+      'name': 'キッチン',
+      'image': 'assets/images/owl_cook.jpeg',
+    },
+    {
+      'name': 'リビング',
+      'image': 'assets/images/owl_living.jpeg',
+    },
+    {
+      'name': '寝室',
+      'image': 'assets/images/owl_sleep.jpeg',
+    },
+    {
+      'name': 'お風呂',
+      'image': 'assets/images/owl_bath.jpeg',
+    },
+    {
+      'name': 'その他',
+      'image': 'assets/images/owl_other.jpeg',
+    },
+  ];
+
+  // タスクテンプレート
+  final Map<String, List<Map<String, String>>> _taskTemplates = {
+    'トイレ': [
+      {'name': 'トイレ掃除', 'subtitle': '便器・床・壁'},
+      {'name': '便座拭き', 'subtitle': '毎日のケア'},
+      {'name': 'タンク掃除', 'subtitle': '月1回'},
+      {'name': 'トイレマット洗濯', 'subtitle': '週1回'},
+    ],
+    'キッチン': [
+      {'name': 'シンク掃除', 'subtitle': '水垢・油汚れ'},
+      {'name': 'コンロ掃除', 'subtitle': '油汚れ除去'},
+      {'name': '冷蔵庫整理', 'subtitle': '賞味期限チェック'},
+      {'name': '換気扇掃除', 'subtitle': '月1回'},
+      {'name': '食器洗い', 'subtitle': '毎日'},
+      {'name': '床拭き', 'subtitle': '油はね対策'},
+    ],
+    'リビング': [
+      {'name': '掃除機かけ', 'subtitle': 'カーペット・床'},
+      {'name': '床掃除', 'subtitle': 'モップがけ'},
+      {'name': '窓拭き', 'subtitle': '内側・外側'},
+      {'name': 'ソファ掃除', 'subtitle': 'クッション整理'},
+      {'name': 'テーブル拭き', 'subtitle': '毎日'},
+      {'name': 'エアコン掃除', 'subtitle': 'フィルター清掃'},
+    ],
+    '寝室': [
+      {'name': 'シーツ交換', 'subtitle': '週1回'},
+      {'name': '布団干し', 'subtitle': '天日干し'},
+      {'name': '枕カバー交換', 'subtitle': '週2回'},
+      {'name': 'ベッド下掃除', 'subtitle': 'ホコリ除去'},
+      {'name': 'クローゼット整理', 'subtitle': '衣替え'},
+    ],
+    'お風呂': [
+      {'name': '浴槽掃除', 'subtitle': '湯垢・ヌメリ'},
+      {'name': '排水口掃除', 'subtitle': '髪の毛除去'},
+      {'name': 'カビ取り', 'subtitle': '壁・天井'},
+      {'name': '鏡磨き', 'subtitle': '水垢除去'},
+      {'name': '洗面台掃除', 'subtitle': '毎日'},
+      {'name': 'お風呂マット洗濯', 'subtitle': '週2回'},
+    ],
+    'その他': [
+      {'name': '玄関掃除', 'subtitle': '靴箱整理'},
+      {'name': 'ベランダ掃除', 'subtitle': '落ち葉・ホコリ'},
+      {'name': '照明掃除', 'subtitle': 'ホコリ除去'},
+      {'name': '観葉植物の水やり', 'subtitle': '毎日'},
+      {'name': 'ゴミ出し', 'subtitle': '地域のルール確認'},
+    ],
+  };
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,63 +115,22 @@ class _TaskPageState extends State<TaskPage> {
             // ヘッダー
             _buildHeader(),
 
-            // タスク一覧
+            // メインコンテンツ
             Expanded(
-              child: Consumer<TaskViewModel>(
-                builder: (context, viewModel, child) {
-                  final tasks = viewModel.tasks;
+              child: Row(
+                children: [
+                  // 左側：カテゴリサイドバー
+                  _buildCategorySidebar(),
 
-                  if (tasks.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('✨', style: TextStyle(fontSize: 48)),
-                          const SizedBox(height: AppSpacing.lg),
-                          Text(
-                            'タスクがありません',
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.gray400,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          ElevatedButton.icon(
-                            onPressed: () => _navigateToAddTask(),
-                            icon: const Icon(Icons.add, size: 20),
-                            label: const Text('タスクを追加'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.gray800,
-                              foregroundColor: AppColors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.xl,
-                                vertical: AppSpacing.md,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    itemCount: tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = tasks[index];
-                      return _buildTaskItem(task, viewModel);
-                    },
-                  );
-                },
+                  // 右側：タスクリスト
+                  Expanded(
+                    child: _buildTaskList(),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      ),
-      // フローティングボタン
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToAddTask(),
-        backgroundColor: AppColors.gray800,
-        child: const Icon(Icons.add, color: AppColors.white),
       ),
     );
   }
@@ -89,23 +138,68 @@ class _TaskPageState extends State<TaskPage> {
   /// ヘッダー
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.lg,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+        border: Border(
+          bottom: BorderSide(color: AppColors.border, width: 1),
+        ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
-          Text('タスク管理', style: AppTextStyles.h1),
-          Consumer<TaskViewModel>(
-            builder: (context, viewModel, child) {
-              return Text(
-                '${viewModel.tasks.length}件',
-                style: AppTextStyles.caption,
-              );
+          // タイトル行
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'タスクを追加',
+                  style: AppTextStyles.h2,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              TextButton(
+                onPressed: () => _navigateToTaskDetail(),
+                child: Text(
+                  '自由入力',
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          // 検索バー
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'タスクを検索',
+              hintStyle: AppTextStyles.body.copyWith(
+                color: AppColors.gray400,
+                fontSize: 14,
+              ),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: AppColors.gray400,
+                size: 20,
+              ),
+              filled: true,
+              fillColor: AppColors.gray50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value.toLowerCase();
+              });
             },
           ),
         ],
@@ -113,148 +207,193 @@ class _TaskPageState extends State<TaskPage> {
     );
   }
 
-  /// タスクアイテム
-  Widget _buildTaskItem(Task task, TaskViewModel viewModel) {
-    return Dismissible(
-      key: Key(task.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: AppSpacing.lg),
-        color: AppColors.error,
-        child: const Icon(Icons.delete_outline, color: AppColors.white),
+  /// カテゴリサイドバー
+  Widget _buildCategorySidebar() {
+    return Container(
+      width: 100,
+      decoration: const BoxDecoration(
+        color: AppColors.gray50,
+        border: Border(
+          right: BorderSide(color: AppColors.border, width: 1),
+        ),
       ),
-      confirmDismiss: (direction) async {
-        return await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('削除確認'),
-            content: Text('「${task.title}」を削除しますか？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('キャンセル'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
-                  '削除',
-                  style: TextStyle(color: AppColors.error),
+      child: ListView.builder(
+        itemCount: _categories.length,
+        itemBuilder: (context, index) {
+          final category = _categories[index];
+          final isSelected = _selectedCategoryIndex == index;
+          final imagePath = category['image'] as String;
+
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedCategoryIndex = index;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.white : Colors.transparent,
+                border: Border(
+                  left: BorderSide(
+                    color: isSelected ? AppColors.gray800 : Colors.transparent,
+                    width: 3,
+                  ),
                 ),
               ),
-            ],
-          ),
-        );
-      },
-      onDismissed: (direction) {
-        viewModel.deleteTask(task.id);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('「${task.title}」を削除しました'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.md),
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // タスク名と完了チェック
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () => viewModel.toggleTaskCompletion(task.id),
-                  child: Container(
-                    width: 20,
-                    height: 20,
+              child: Column(
+                children: [
+                  // フクロウ画像
+                  Container(
+                    width: isSelected ? 56 : 48,
+                    height: isSelected ? 56 : 48,
                     decoration: BoxDecoration(
-                      color: task.isCompleted
-                          ? AppColors.gray800
-                          : Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: task.isCompleted
-                            ? AppColors.gray800
-                            : AppColors.gray300,
-                        width: 2,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        imagePath,
+                        fit: BoxFit.cover,
                       ),
                     ),
-                    child: task.isCompleted
-                        ? const Icon(
-                            Icons.check,
-                            size: 12,
-                            color: AppColors.white,
-                          )
-                        : null,
                   ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    task.title,
-                    style: AppTextStyles.h3.copyWith(
-                      fontWeight: FontWeight.w300,
-                      decoration: task.isCompleted
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                      color: task.isCompleted
-                          ? AppColors.gray400
-                          : AppColors.gray800,
+                  const SizedBox(height: 4),
+                  Text(
+                    category['name'],
+                    style: AppTextStyles.caption.copyWith(
+                      fontSize: 11,
+                      fontWeight:
+                          isSelected ? FontWeight.w400 : FontWeight.w300,
+                      color: isSelected ? AppColors.gray800 : AppColors.gray600,
                     ),
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: AppSpacing.md),
-
-            // 繰り返し設定
-            if (task.repeatType != RepeatType.none)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.gray50,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  _getRepeatTypeLabel(task.repeatType),
-                  style: AppTextStyles.caption.copyWith(fontSize: 11),
-                ),
+                ],
               ),
-          ],
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  /// 繰り返しタイプのラベルを取得
-  String _getRepeatTypeLabel(RepeatType type) {
-    switch (type) {
-      case RepeatType.daily:
-        return '毎日';
-      case RepeatType.weekly:
-        return '毎週';
-      case RepeatType.monthly:
-        return '毎月';
-      case RepeatType.none:
-        return '';
+  /// タスクリスト
+  Widget _buildTaskList() {
+    final categoryName = _categories[_selectedCategoryIndex]['name'];
+    List<Map<String, String>> tasks = [];
+
+    if (categoryName == 'すべて') {
+      // 全カテゴリのタスクを表示
+      _taskTemplates.forEach((key, value) {
+        tasks.addAll(value);
+      });
+    } else {
+      tasks = _taskTemplates[categoryName] ?? [];
     }
+
+    // 検索フィルター
+    if (_searchQuery.isNotEmpty) {
+      tasks = tasks
+          .where((task) =>
+              task['name']!.toLowerCase().contains(_searchQuery) ||
+              task['subtitle']!.toLowerCase().contains(_searchQuery))
+          .toList();
+    }
+
+    if (tasks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🔍', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              '該当するタスクが見つかりません',
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.gray400,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        return _buildTaskItem(
+          name: task['name']!,
+          subtitle: task['subtitle']!,
+        );
+      },
+    );
   }
 
-  /// タスク追加画面に遷移
-  void _navigateToAddTask() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const AddTaskPage()));
+  /// タスクアイテム
+  Widget _buildTaskItem({
+    required String name,
+    required String subtitle,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.sm,
+        ),
+        title: Text(
+          name,
+          style: AppTextStyles.body.copyWith(
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: AppTextStyles.caption.copyWith(
+            fontSize: 12,
+          ),
+        ),
+        trailing: Container(
+          width: 32,
+          height: 32,
+          decoration: const BoxDecoration(
+            color: AppColors.gray50,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.add,
+            color: AppColors.gray800,
+            size: 20,
+          ),
+        ),
+        onTap: () => _navigateToTaskDetail(taskName: name),
+      ),
+    );
+  }
+
+  /// タスク詳細画面に遷移
+  void _navigateToTaskDetail({String? taskName}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => TaskDetailPage(initialTaskName: taskName),
+      ),
+    );
   }
 }
