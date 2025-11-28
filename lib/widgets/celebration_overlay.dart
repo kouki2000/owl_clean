@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import '../utils/colors.dart';
 import '../utils/constants.dart';
+import 'walking_cat.dart';
 
 /// 全タスク完了時の祝福オーバーレイ
 class CelebrationOverlay extends StatefulWidget {
@@ -18,161 +18,150 @@ class CelebrationOverlay extends StatefulWidget {
 
 class _CelebrationOverlayState extends State<CelebrationOverlay>
     with SingleTickerProviderStateMixin {
-  late VideoPlayerController _videoController;
-  late AnimationController _animationController;
+  late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  bool _isVideoReady = false;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    // アニメーションコントローラー
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeIn,
-      ),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeIn,
+    ));
 
-    // 動画プレーヤー初期化
-    _videoController = VideoPlayerController.asset(
-      'assets/videos/owl_complete.mp4',
-    )..initialize().then((_) {
-        setState(() {
-          _isVideoReady = true;
-        });
-        _videoController.setLooping(true);
-        _videoController.play();
-        _animationController.forward();
-      });
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    ));
+
+    _controller.forward();
   }
 
   @override
   void dispose() {
-    _videoController.dispose();
-    _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        _animationController.reverse().then((_) {
-          widget.onClose();
-        });
-      },
-      child: Container(
-        color: Colors.black.withOpacity(0.95),
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // タイトル
-                const Text(
-                  '🎉',
-                  style: TextStyle(fontSize: 64),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  '全タスク完了！',
-                  style: AppTextStyles.h1.copyWith(
-                    color: AppColors.white,
-                    fontSize: 32,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'お疲れさまでした！',
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.white,
-                    fontSize: 18,
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.xxl),
-
-                // 動画
-                if (_isVideoReady)
-                  Container(
-                    width: 280,
-                    height: 280,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.2),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: AspectRatio(
-                        aspectRatio: _videoController.value.aspectRatio,
-                        child: VideoPlayer(_videoController),
+    return Material(
+      color: Colors.black.withOpacity(0.7),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Opacity(
+            opacity: _fadeAnimation.value,
+            child: Transform.scale(
+              scale: _scaleAnimation.value,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 祝福メッセージ
+                    Text(
+                      '🎉',
+                      style: TextStyle(
+                        fontSize: 60,
+                        height: 1.2,
                       ),
                     ),
-                  )
-                else
-                  Container(
-                    width: 280,
-                    height: 280,
-                    decoration: BoxDecoration(
-                      color: AppColors.gray800,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Center(
-                      child: CircularProgressIndicator(
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      '今日のタスク完了！',
+                      style: AppTextStyles.h1.copyWith(
                         color: AppColors.white,
+                        fontSize: 32,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-
-                const SizedBox(height: AppSpacing.xxl),
-
-                // 閉じるヒント
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                    vertical: AppSpacing.md,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.touch_app,
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'お疲れ様でした',
+                      style: AppTextStyles.body.copyWith(
                         color: AppColors.white,
-                        size: 20,
+                        fontSize: 18,
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        'タップして閉じる',
-                        style: AppTextStyles.body.copyWith(
-                          color: AppColors.white,
-                          fontSize: 14,
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: AppSpacing.xxl),
+
+                    // 寝ている猫（大きめ）
+                    Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: WalkingCat(
+                          size: 150,
+                          isSleeping: true,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.xxl),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // 閉じるボタン
+                    ElevatedButton(
+                      onPressed: widget.onClose,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.white,
+                        foregroundColor: AppColors.gray800,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xxl,
+                          vertical: AppSpacing.lg,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '閉じる',
+                            style: AppTextStyles.body.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          const Icon(Icons.close, size: 20),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

@@ -1,20 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
-
-/// ナビゲーションアイテムのデータ
-class NavItem {
-  final IconData icon;
-  final String label;
-  final String? imagePath; // 画像パス（オプション）
-
-  const NavItem({required this.icon, required this.label, this.imagePath});
-}
+import '../utils/constants.dart';
 
 /// カスタムボトムナビゲーションバー
-///
-/// エレガント＆シンプルなデザインに合わせた
-/// ミニマルなナビゲーションバー
 class CustomBottomNav extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -30,34 +18,26 @@ class CustomBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white.withOpacity(0.9),
-        border: const Border(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        border: Border(
           top: BorderSide(color: AppColors.border, width: 1),
         ),
       ),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: items.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final item = entry.value;
-                  final isActive = currentIndex == index;
-
-                  return _NavButton(
-                    icon: item.icon,
-                    label: item.label,
-                    imagePath: item.imagePath,
-                    isActive: isActive,
-                    onTap: () => onTap(index),
-                  );
-                }).toList(),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.md,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(
+              items.length,
+              (index) => _buildNavItem(
+                item: items[index],
+                isSelected: currentIndex == index,
+                onTap: () => onTap(index),
               ),
             ),
           ),
@@ -65,107 +45,66 @@ class CustomBottomNav extends StatelessWidget {
       ),
     );
   }
-}
 
-/// ナビゲーションボタン
-class _NavButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String? imagePath;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const _NavButton({
-    required this.icon,
-    required this.label,
-    this.imagePath,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildNavItem({
+    required NavItem item,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // アイコン部分
-            SizedBox(
-              width: 36,
-              height: 36,
-              child: imagePath != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: ColorFiltered(
-                        colorFilter: isActive
-                            ? const ColorFilter.mode(
-                                Colors.transparent,
-                                BlendMode.multiply,
-                              )
-                            : ColorFilter.mode(
-                                Colors.grey.withOpacity(0.5),
-                                BlendMode.saturation,
-                              ),
-                        child: Image.asset(
-                          imagePath!,
-                          width: 36,
-                          height: 36,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            // デバッグ用：エラー表示
-                            print('画像読み込みエラー: $imagePath - $error');
-                            return Icon(
-                              icon,
-                              size: 24,
-                              color: isActive
-                                  ? AppColors.gray800
-                                  : AppColors.gray300,
-                            );
-                          },
-                        ),
-                      ),
-                    )
-                  : Icon(
-                      icon,
-                      size: 24,
-                      color: isActive ? AppColors.gray800 : AppColors.gray300,
-                    ),
+            // アイコン
+            Icon(
+              item.icon,
+              size: 24,
+              color: isSelected ? AppColors.gray800 : AppColors.gray400,
             ),
-
             const SizedBox(height: 4),
-
             // ラベル
             Text(
-              label,
-              style: TextStyle(
+              item.label,
+              style: AppTextStyles.caption.copyWith(
                 fontSize: 11,
-                fontWeight: FontWeight.w300,
-                color: isActive ? AppColors.gray800 : AppColors.gray400,
-                height: 1.2,
+                color: isSelected ? AppColors.gray800 : AppColors.gray400,
+                fontWeight: isSelected ? FontWeight.w400 : FontWeight.w300,
               ),
             ),
-
-            const SizedBox(height: 4),
-
-            // アクティブインジケーター
-            if (isActive)
+            // 選択インジケーター
+            if (isSelected)
               Container(
+                margin: const EdgeInsets.only(top: 2),
                 width: 4,
                 height: 4,
                 decoration: const BoxDecoration(
                   color: AppColors.gray800,
                   shape: BoxShape.circle,
                 ),
-              )
-            else
-              const SizedBox(height: 4),
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+/// ナビゲーションアイテム
+class NavItem {
+  final IconData icon;
+  final String label;
+  final String? imagePath; // 後方互換性のために残す
+
+  const NavItem({
+    required this.icon,
+    required this.label,
+    this.imagePath,
+  });
 }

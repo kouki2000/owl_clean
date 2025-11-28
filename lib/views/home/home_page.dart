@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:math' as math;
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
-import '../../widgets/owl_character.dart';
+import '../../widgets/walking_cat.dart';
 import '../../widgets/task_card.dart';
+import '../../widgets/floating_balloon.dart';
 import '../../viewmodels/task_viewmodel.dart';
 import '../../widgets/celebration_overlay.dart';
 
 /// ホーム画面
-///
-/// 今日のタスク一覧を表示
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -18,33 +18,28 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  OwlMood owlMood = OwlMood.happy;
   bool _hasShownCelebration = false;
+  final Map<String, GlobalKey<FloatingBalloonState>> _balloonKeys = {};
 
   void _toggleTask(String id) async {
     final viewModel = context.read<TaskViewModel>();
+    final task = viewModel.tasks.firstWhere((t) => t.id == id);
 
-    // フクロウの表情を変更
-    setState(() {
-      owlMood = OwlMood.excited;
-    });
+    if (!task.isCompleted && _balloonKeys.containsKey(id)) {
+      _balloonKeys[id]?.currentState?.pop();
+      await Future.delayed(const Duration(milliseconds: 400));
+    }
 
-    // タスクの完了状態を切り替え（今日の日付で）
     await viewModel.toggleTaskCompletion(id, DateTime.now());
-
-    // 2秒後に通常に戻す
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          owlMood = OwlMood.happy;
-        });
-      }
-    });
   }
 
-  /// タスクを削除
   Future<void> _deleteTask(String id, String title) async {
     final viewModel = context.read<TaskViewModel>();
+
+    if (_balloonKeys.containsKey(id)) {
+      _balloonKeys[id]?.currentState?.pop();
+      await Future.delayed(const Duration(milliseconds: 400));
+    }
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -86,14 +81,12 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: AppColors.white,
       body: Consumer<TaskViewModel>(
         builder: (context, viewModel, child) {
-          // ローディング中
           if (viewModel.isLoading && viewModel.tasks.isEmpty) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.gray800),
             );
           }
 
-          // エラー表示
           if (viewModel.error != null) {
             return Center(
               child: Column(
@@ -117,19 +110,19 @@ class _HomePageState extends State<HomePage> {
           }
 
           final todayTasks = viewModel.todayTasks;
+          final incompleteTasks =
+              todayTasks.where((task) => !task.isCompleted).toList();
           final completedCount =
               todayTasks.where((task) => task.isCompleted).length;
           final totalCount = todayTasks.length;
           final allCompleted = totalCount > 0 && completedCount == totalCount;
 
-          // 全タスク完了時に祝福オーバーレイを表示
           if (allCompleted && !_hasShownCelebration) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _showCelebration(context);
             });
           }
 
-          // タスクが未完了になったらフラグをリセット
           if (!allCompleted) {
             _hasShownCelebration = false;
           }
@@ -137,18 +130,36 @@ class _HomePageState extends State<HomePage> {
           return SafeArea(
             child: Column(
               children: [
-                // ヘッダー
                 _buildHeader(),
-
-                // メインコンテンツ
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
-                        const SizedBox(height: AppSpacing.xl),
+                        // 猫と風船のエリア
+                        SizedBox(
+                          height: 220,
+                          child: Center(
+                            child: SizedBox(
+                              width: 280,
+                              height: 220,
+                              child: Stack(
+                                children: [
+                                  // 猫（中央）
+                                  Center(
+                                    child: WalkingCat(
+                                      size: 100,
+                                      isSleeping:
+                                          incompleteTasks.isEmpty, // ⚠️ ここを追加
+                                    ),
+                                  ),
 
-                        // フクロウキャラクター
-                        OwlCharacter(mood: owlMood, size: 80),
+                                  // 風船（円形に均等配置）
+                                  ..._buildCircularBalloons(incompleteTasks),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
 
                         const SizedBox(height: AppSpacing.xl),
 
@@ -192,10 +203,7 @@ class _HomePageState extends State<HomePage> {
                               key: Key(task.id),
                               direction: DismissDirection.endToStart,
                               confirmDismiss: (direction) async {
-                                return false; // ダイアログで確認するのでfalse
-                              },
-                              onDismissed: (direction) {
-                                // 実際には呼ばれない
+                                return false;
                               },
                               background: Container(
                                 alignment: Alignment.centerRight,
@@ -243,7 +251,49 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// 祝福オーバーレイを表示
+  /// 円形に風船を配置
+  List<Widget> _buildCircularBalloons(List<dynamic> tasks) {
+    if (tasks.isEmpty) return [];
+
+    final balloons = <Widget>[];
+    final radius = 100.0; // 円の半径
+    final centerX = 140.0; // 中心X座標
+    final centerY = 110.0; // 中心Y座標
+
+    for (int i = 0; i < tasks.length; i++) {
+      final task = tasks[i];
+
+      // 角度を計算（-90度から開始して時計回り）
+      final angle = (i * 2 * math.pi / tasks.length) - (math.pi / 2);
+
+      // 円周上の座標を計算
+      final x = centerX + radius * math.cos(angle) - 25; // -25はアイコンサイズの半分
+      final y = centerY + radius * math.sin(angle) - 25;
+
+      _balloonKeys[task.id] ??= GlobalKey<FloatingBalloonState>();
+
+      balloons.add(
+        Positioned(
+          left: x,
+          top: y,
+          child: FloatingBalloon(
+            key: _balloonKeys[task.id],
+            icon: CategoryIconHelper.getIcon(task.categoryId),
+            size: 50,
+            floatDuration: Duration(milliseconds: 2500 + (i * 200)),
+            onPop: () {
+              setState(() {
+                _balloonKeys.remove(task.id);
+              });
+            },
+          ),
+        ),
+      );
+    }
+
+    return balloons;
+  }
+
   void _showCelebration(BuildContext context) {
     setState(() {
       _hasShownCelebration = true;
@@ -259,7 +309,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// ヘッダー
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -271,7 +320,6 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Row(
         children: [
-          // アプリ名とサブタイトル
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

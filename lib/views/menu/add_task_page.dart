@@ -19,96 +19,96 @@ class _AddTaskPageState extends State<AddTaskPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  // カテゴリ（全て画像に統一）
+  // カテゴリ（アイコンに統一）
   final List<Map<String, dynamic>> _categories = [
     {
       'name': 'すべて',
-      'image': 'assets/images/owl_all.jpeg',
+      'icon': Icons.grid_view,
     },
     {
       'name': 'トイレ',
-      'image': 'assets/images/owl_toilet.jpeg',
+      'icon': Icons.wc,
     },
     {
       'name': 'キッチン',
-      'image': 'assets/images/owl_cook.jpeg',
+      'icon': Icons.kitchen,
     },
     {
       'name': 'リビング',
-      'image': 'assets/images/owl_living.jpeg',
+      'icon': Icons.living,
     },
     {
       'name': '寝室',
-      'image': 'assets/images/owl_sleep.jpeg',
+      'icon': Icons.hotel,
     },
     {
       'name': 'お風呂',
-      'image': 'assets/images/owl_bath.jpeg',
+      'icon': Icons.bathtub,
     },
     {
       'name': 'ゴミ出し',
-      'image': 'assets/images/owl_garbage.jpeg',
+      'icon': Icons.delete,
     },
     {
       'name': 'その他',
-      'image': 'assets/images/owl_other.jpeg',
+      'icon': Icons.more_horiz,
     },
   ];
 
-  // タスクテンプレート
-  final Map<String, List<Map<String, String>>> _taskTemplates = {
+// タスクテンプレート（categoryId nullable対応）
+  final Map<String, List<Map<String, String?>>> _taskTemplates = {
     'トイレ': [
-      {'name': 'トイレ掃除', 'subtitle': '便器・床・壁'},
-      {'name': '便座拭き', 'subtitle': '毎日のケア'},
-      {'name': 'タンク掃除', 'subtitle': '月1回'},
-      {'name': 'トイレマット洗濯', 'subtitle': '週1回'},
+      {'name': 'トイレ掃除', 'subtitle': '便器・床・壁', 'categoryId': 'toilet'},
+      {'name': '便座拭き', 'subtitle': '毎日のケア', 'categoryId': 'toilet'},
+      {'name': 'タンク掃除', 'subtitle': '月1回', 'categoryId': 'toilet'},
+      {'name': 'トイレマット洗濯', 'subtitle': '週1回', 'categoryId': 'toilet'},
     ],
     'キッチン': [
-      {'name': 'シンク掃除', 'subtitle': '水垢・油汚れ'},
-      {'name': 'コンロ掃除', 'subtitle': '油汚れ除去'},
-      {'name': '冷蔵庫整理', 'subtitle': '賞味期限チェック'},
-      {'name': '換気扇掃除', 'subtitle': '月1回'},
-      {'name': '食器洗い', 'subtitle': '毎日'},
-      {'name': '床拭き', 'subtitle': '油はね対策'},
+      {'name': 'シンク掃除', 'subtitle': '水垢・油汚れ', 'categoryId': 'kitchen'},
+      {'name': 'コンロ掃除', 'subtitle': '油汚れ除去', 'categoryId': 'kitchen'},
+      {'name': '冷蔵庫整理', 'subtitle': '賞味期限チェック', 'categoryId': 'kitchen'},
+      {'name': '換気扇掃除', 'subtitle': '月1回', 'categoryId': 'kitchen'},
+      {'name': '食器洗い', 'subtitle': '毎日', 'categoryId': 'kitchen'},
+      {'name': '床拭き', 'subtitle': '油はね対策', 'categoryId': 'kitchen'},
     ],
     'リビング': [
-      {'name': '掃除機かけ', 'subtitle': 'カーペット・床'},
-      {'name': '床掃除', 'subtitle': 'モップがけ'},
-      {'name': '窓拭き', 'subtitle': '内側・外側'},
-      {'name': 'ソファ掃除', 'subtitle': 'クッション整理'},
-      {'name': 'テーブル拭き', 'subtitle': '毎日'},
-      {'name': 'エアコン掃除', 'subtitle': 'フィルター清掃'},
+      {'name': '掃除機かけ', 'subtitle': 'カーペット・床', 'categoryId': 'living'},
+      {'name': '床掃除', 'subtitle': 'モップがけ', 'categoryId': 'living'},
+      {'name': '窓拭き', 'subtitle': '内側・外側', 'categoryId': 'living'},
+      {'name': 'ソファ掃除', 'subtitle': 'クッション整理', 'categoryId': 'living'},
+      {'name': 'テーブル拭き', 'subtitle': '毎日', 'categoryId': 'living'},
+      {'name': 'エアコン掃除', 'subtitle': 'フィルター清掃', 'categoryId': 'living'},
     ],
     '寝室': [
-      {'name': 'シーツ交換', 'subtitle': '週1回'},
-      {'name': '布団干し', 'subtitle': '天日干し'},
-      {'name': '枕カバー交換', 'subtitle': '週2回'},
-      {'name': 'ベッド下掃除', 'subtitle': 'ホコリ除去'},
-      {'name': 'クローゼット整理', 'subtitle': '衣替え'},
+      {'name': 'シーツ交換', 'subtitle': '週1回', 'categoryId': 'bedroom'},
+      {'name': '布団干し', 'subtitle': '天日干し', 'categoryId': 'bedroom'},
+      {'name': '枕カバー交換', 'subtitle': '週2回', 'categoryId': 'bedroom'},
+      {'name': 'ベッド下掃除', 'subtitle': 'ホコリ除去', 'categoryId': 'bedroom'},
+      {'name': 'クローゼット整理', 'subtitle': '衣替え', 'categoryId': 'bedroom'},
     ],
     'お風呂': [
-      {'name': '浴槽掃除', 'subtitle': '湯垢・ヌメリ'},
-      {'name': '排水口掃除', 'subtitle': '髪の毛除去'},
-      {'name': 'カビ取り', 'subtitle': '壁・天井'},
-      {'name': '鏡磨き', 'subtitle': '水垢除去'},
-      {'name': '洗面台掃除', 'subtitle': '毎日'},
-      {'name': 'お風呂マット洗濯', 'subtitle': '週2回'},
+      {'name': '浴槽掃除', 'subtitle': '湯垢・ヌメリ', 'categoryId': 'bath'},
+      {'name': '排水口掃除', 'subtitle': '髪の毛除去', 'categoryId': 'bath'},
+      {'name': 'カビ取り', 'subtitle': '壁・天井', 'categoryId': 'bath'},
+      {'name': '鏡磨き', 'subtitle': '水垢除去', 'categoryId': 'bath'},
+      {'name': '洗面台掃除', 'subtitle': '毎日', 'categoryId': 'bath'},
+      {'name': 'お風呂マット洗濯', 'subtitle': '週2回', 'categoryId': 'bath'},
     ],
     'ゴミ出し': [
-      {'name': '燃えるゴミ', 'subtitle': '週2回'},
-      {'name': '燃えないゴミ', 'subtitle': '月2回'},
-      {'name': '資源ゴミ', 'subtitle': '週1回'},
-      {'name': 'プラスチック', 'subtitle': '週1回'},
-      {'name': '紙類', 'subtitle': '月1回'},
-      {'name': 'ビン・カン', 'subtitle': '週1回'},
-      {'name': 'ペットボトル', 'subtitle': '週1回'},
-      {'name': '粗大ゴミ', 'subtitle': '要予約'},
+      {'name': '燃えるゴミ', 'subtitle': '週2回', 'categoryId': 'garbage'},
+      {'name': '燃えないゴミ', 'subtitle': '月2回', 'categoryId': 'garbage'},
+      {'name': '資源ゴミ', 'subtitle': '週1回', 'categoryId': 'garbage'},
+      {'name': 'プラスチック', 'subtitle': '週1回', 'categoryId': 'garbage'},
+      {'name': '紙類', 'subtitle': '月1回', 'categoryId': 'garbage'},
+      {'name': 'ビン・カン', 'subtitle': '週1回', 'categoryId': 'garbage'},
+      {'name': 'ペットボトル', 'subtitle': '週1回', 'categoryId': 'garbage'},
+      {'name': '粗大ゴミ', 'subtitle': '要予約', 'categoryId': 'garbage'},
     ],
     'その他': [
-      {'name': '玄関掃除', 'subtitle': '靴箱整理'},
-      {'name': 'ベランダ掃除', 'subtitle': '落ち葉・ホコリ'},
-      {'name': '照明掃除', 'subtitle': 'ホコリ除去'},
-      {'name': '観葉植物の水やり', 'subtitle': '毎日'},
+      {'name': '玄関掃除', 'subtitle': '靴箱整理', 'categoryId': null},
+      {'name': 'ベランダ掃除', 'subtitle': '落ち葉・ホコリ', 'categoryId': null},
+      {'name': '照明掃除', 'subtitle': 'ホコリ除去', 'categoryId': null},
+      {'name': '観葉植物の水やり', 'subtitle': '毎日', 'categoryId': null},
     ],
   };
 
@@ -235,7 +235,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
         itemBuilder: (context, index) {
           final category = _categories[index];
           final isSelected = _selectedCategoryIndex == index;
-          final imagePath = category['image'] as String;
+          final icon = category['icon'] as IconData;
 
           return GestureDetector(
             onTap: () {
@@ -256,12 +256,13 @@ class _AddTaskPageState extends State<AddTaskPage> {
               ),
               child: Column(
                 children: [
-                  // フクロウ画像
+                  // アイコン
                   Container(
                     width: isSelected ? 56 : 48,
                     height: isSelected ? 56 : 48,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
+                      color: isSelected ? AppColors.gray800 : AppColors.gray200,
+                      borderRadius: BorderRadius.circular(12),
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
@@ -272,12 +273,10 @@ class _AddTaskPageState extends State<AddTaskPage> {
                             ]
                           : null,
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        imagePath,
-                        fit: BoxFit.cover,
-                      ),
+                    child: Icon(
+                      icon,
+                      color: isSelected ? AppColors.white : AppColors.gray600,
+                      size: isSelected ? 28 : 24,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -302,7 +301,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
   /// タスクリスト
   Widget _buildTaskList() {
     final categoryName = _categories[_selectedCategoryIndex]['name'];
-    List<Map<String, String>> tasks = [];
+    List<Map<String, String?>> tasks = []; // ⚠️ String?に変更
 
     // 検索クエリがある場合、またはカテゴリが「すべて」の場合
     if (_searchQuery.isNotEmpty || categoryName == 'すべて') {
@@ -353,6 +352,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
         return _buildTaskItem(
           name: task['name']!,
           subtitle: task['subtitle']!,
+          categoryId: task['categoryId'],
         );
       },
     );
@@ -362,6 +362,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
   Widget _buildTaskItem({
     required String name,
     required String subtitle,
+    String? categoryId, // 追加
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -400,19 +401,16 @@ class _AddTaskPageState extends State<AddTaskPage> {
             size: 20,
           ),
         ),
-        onTap: () => _navigateToTaskDetail(taskName: name),
+        onTap: () => _navigateToTaskDetail(
+          taskName: name,
+          categoryId: categoryId, // 追加
+        ),
       ),
     );
   }
 
   /// タスク詳細画面に遷移
-  void _navigateToTaskDetail({String? taskName}) {
-    // 現在選択されているカテゴリを取得
-    final categoryName = _categories[_selectedCategoryIndex]['name'];
-
-    // ゴミ出しカテゴリの場合はcategoryIdを設定
-    final categoryId = categoryName == 'ゴミ出し' ? 'garbage' : null;
-
+  void _navigateToTaskDetail({String? taskName, String? categoryId}) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => TaskDetailPage(
@@ -421,5 +419,25 @@ class _AddTaskPageState extends State<AddTaskPage> {
         ),
       ),
     );
+  }
+
+  /// カテゴリー名からcategoryIdに変換
+  String? _getCategoryId(String categoryName) {
+    switch (categoryName) {
+      case 'トイレ':
+        return 'toilet';
+      case 'キッチン':
+        return 'kitchen';
+      case 'リビング':
+        return 'living';
+      case '寝室':
+        return 'bedroom';
+      case 'お風呂':
+        return 'bath';
+      case 'ゴミ出し':
+        return 'garbage';
+      default:
+        return null; // すべて、その他
+    }
   }
 }
