@@ -10,11 +10,13 @@ import '../../models/task.dart';
 /// タスク詳細登録画面
 class TaskDetailPage extends StatefulWidget {
   final String? initialTaskName;
+  final String? categoryId; // 追加
   final Task? existingTask; // 編集時に使用
 
   const TaskDetailPage({
     super.key,
     this.initialTaskName,
+    this.categoryId, // 追加
     this.existingTask,
   });
 
@@ -278,7 +280,6 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       initialDate: _startDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      // localeは削除（MaterialAppで設定済み）
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -366,11 +367,12 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     }
 
     try {
-      // タスクを追加（開始日を渡す）
+      // タスクを追加（categoryIdを渡す）
       await context.read<TaskViewModel>().addTask(
             title: taskName,
+            categoryId: widget.categoryId, // categoryIdを渡す
             repeatType: _selectedRepeatType,
-            createdAt: _startDate, // 開始日を渡す
+            createdAt: _startDate,
           );
 
       // カレンダーも更新

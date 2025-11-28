@@ -29,8 +29,8 @@ class _HomePageState extends State<HomePage> {
       owlMood = OwlMood.excited;
     });
 
-    // タスクの完了状態を切り替え
-    await viewModel.toggleTaskCompletion(id);
+    // タスクの完了状態を切り替え（今日の日付で）
+    await viewModel.toggleTaskCompletion(id, DateTime.now());
 
     // 2秒後に通常に戻す
     Future.delayed(const Duration(seconds: 2), () {
@@ -138,7 +138,7 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               children: [
                 // ヘッダー
-                _buildHeader(viewModel),
+                _buildHeader(),
 
                 // メインコンテンツ
                 Expanded(
@@ -224,17 +224,11 @@ class _HomePageState extends State<HomePage> {
                                 child: TaskCard(
                                   title: task.title,
                                   isCompleted: task.isCompleted,
-                                  progress: task.progress,
                                   onCheckboxTap: () => _toggleTask(task.id),
                                 ),
                               ),
                             );
                           }).toList(),
-
-                        const SizedBox(height: AppSpacing.xl),
-
-                        // 統計セクション
-                        _buildStatsSection(viewModel),
 
                         const SizedBox(height: AppSpacing.xxl),
                       ],
@@ -266,7 +260,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// ヘッダー
-  Widget _buildHeader(TaskViewModel viewModel) {
+  Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.xl,
@@ -276,7 +270,6 @@ class _HomePageState extends State<HomePage> {
         border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // アプリ名とサブタイトル
           Column(
@@ -287,53 +280,8 @@ class _HomePageState extends State<HomePage> {
               Text(AppConstants.appSubtitle, style: AppTextStyles.caption),
             ],
           ),
-
-          // 完了数
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('${viewModel.totalCompletedCount}', style: AppTextStyles.h1),
-              const SizedBox(height: 4),
-              Text('COMPLETED', style: AppTextStyles.caption),
-            ],
-          ),
         ],
       ),
-    );
-  }
-
-  /// 統計セクション
-  Widget _buildStatsSection(TaskViewModel viewModel) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.lg,
-      ),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatItem('Today', '${viewModel.todayCompletedCount}'),
-          _buildStatItem('Week', '${viewModel.weekCompletedCount}'),
-          _buildStatItem('Streak', '${viewModel.streakDays}'),
-        ],
-      ),
-    );
-  }
-
-  /// 統計アイテム
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w300),
-        ),
-        const SizedBox(height: 4),
-        Text(label.toUpperCase(), style: AppTextStyles.caption),
-      ],
     );
   }
 }

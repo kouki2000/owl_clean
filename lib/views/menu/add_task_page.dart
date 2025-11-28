@@ -46,6 +46,10 @@ class _AddTaskPageState extends State<AddTaskPage> {
       'image': 'assets/images/owl_bath.jpeg',
     },
     {
+      'name': 'ゴミ出し',
+      'image': 'assets/images/owl_garbage.jpeg',
+    },
+    {
       'name': 'その他',
       'image': 'assets/images/owl_other.jpeg',
     },
@@ -90,12 +94,21 @@ class _AddTaskPageState extends State<AddTaskPage> {
       {'name': '洗面台掃除', 'subtitle': '毎日'},
       {'name': 'お風呂マット洗濯', 'subtitle': '週2回'},
     ],
+    'ゴミ出し': [
+      {'name': '燃えるゴミ', 'subtitle': '週2回'},
+      {'name': '燃えないゴミ', 'subtitle': '月2回'},
+      {'name': '資源ゴミ', 'subtitle': '週1回'},
+      {'name': 'プラスチック', 'subtitle': '週1回'},
+      {'name': '紙類', 'subtitle': '月1回'},
+      {'name': 'ビン・カン', 'subtitle': '週1回'},
+      {'name': 'ペットボトル', 'subtitle': '週1回'},
+      {'name': '粗大ゴミ', 'subtitle': '要予約'},
+    ],
     'その他': [
       {'name': '玄関掃除', 'subtitle': '靴箱整理'},
       {'name': 'ベランダ掃除', 'subtitle': '落ち葉・ホコリ'},
       {'name': '照明掃除', 'subtitle': 'ホコリ除去'},
       {'name': '観葉植物の水やり', 'subtitle': '毎日'},
-      {'name': 'ゴミ出し', 'subtitle': '地域のルール確認'},
     ],
   };
 
@@ -291,16 +304,18 @@ class _AddTaskPageState extends State<AddTaskPage> {
     final categoryName = _categories[_selectedCategoryIndex]['name'];
     List<Map<String, String>> tasks = [];
 
-    if (categoryName == 'すべて') {
+    // 検索クエリがある場合、またはカテゴリが「すべて」の場合
+    if (_searchQuery.isNotEmpty || categoryName == 'すべて') {
       // 全カテゴリのタスクを表示
       _taskTemplates.forEach((key, value) {
         tasks.addAll(value);
       });
     } else {
+      // 選択されたカテゴリのタスクのみ
       tasks = _taskTemplates[categoryName] ?? [];
     }
 
-    // 検索フィルター
+    // 検索フィルター（検索クエリがある場合のみ）
     if (_searchQuery.isNotEmpty) {
       tasks = tasks
           .where((task) =>
@@ -317,7 +332,9 @@ class _AddTaskPageState extends State<AddTaskPage> {
             const Text('🔍', style: TextStyle(fontSize: 48)),
             const SizedBox(height: AppSpacing.md),
             Text(
-              '該当するタスクが見つかりません',
+              _searchQuery.isNotEmpty
+                  ? '「$_searchQuery」に該当するタスクが見つかりません'
+                  : '該当するタスクが見つかりません',
               style: AppTextStyles.body.copyWith(
                 color: AppColors.gray400,
                 fontSize: 14,
@@ -390,9 +407,18 @@ class _AddTaskPageState extends State<AddTaskPage> {
 
   /// タスク詳細画面に遷移
   void _navigateToTaskDetail({String? taskName}) {
+    // 現在選択されているカテゴリを取得
+    final categoryName = _categories[_selectedCategoryIndex]['name'];
+
+    // ゴミ出しカテゴリの場合はcategoryIdを設定
+    final categoryId = categoryName == 'ゴミ出し' ? 'garbage' : null;
+
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => TaskDetailPage(initialTaskName: taskName),
+        builder: (context) => TaskDetailPage(
+          initialTaskName: taskName,
+          categoryId: categoryId,
+        ),
       ),
     );
   }

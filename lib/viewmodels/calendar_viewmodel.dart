@@ -26,13 +26,22 @@ class CalendarViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  /// 選択された日付のタスクを取得
-  List<Task> getTasksForDay(DateTime day) {
+  /// 選択された日付のタスクを取得（タブでフィルタリング）
+  List<Task> getTasksForDay(DateTime day, {bool isGarbageTab = false}) {
     final dayOnly = DateTime(day.year, day.month, day.day);
     final dateKey = _getDateKey(dayOnly);
     final completedIds = _dailyCompletions[dateKey] ?? {};
 
     return _tasks.where((task) {
+      // タブに応じてフィルタリング
+      if (isGarbageTab) {
+        // ゴミ出しタブ：categoryId = 'garbage' のみ
+        if (task.categoryId != 'garbage') return false;
+      } else {
+        // 掃除タブ：categoryId != 'garbage' のみ
+        if (task.categoryId == 'garbage') return false;
+      }
+
       return _isTaskVisibleOnDate(task, dayOnly);
     }).map((task) {
       // 日次完了状態を反映したTaskを返す
@@ -61,11 +70,9 @@ class CalendarViewModel extends ChangeNotifier {
   }
 
   /// 指定した日にタスクやゴミ出しがあるかチェック（カレンダーのマーカー用）
-  bool hasEventsOnDay(DateTime day, {bool includeGarbage = true}) {
-    final hasTasks = getTasksForDay(day).isNotEmpty;
-    final hasGarbage =
-        includeGarbage && getGarbageSchedulesForDay(day).isNotEmpty;
-    return hasTasks || hasGarbage;
+  bool hasEventsOnDay(DateTime day, {bool isGarbageTab = false}) {
+    final hasTasks = getTasksForDay(day, isGarbageTab: isGarbageTab).isNotEmpty;
+    return hasTasks;
   }
 
   /// タスクが指定した日付に表示されるべきかチェック
@@ -115,24 +122,11 @@ class CalendarViewModel extends ChangeNotifier {
   /// 日次完了状態を読み込み
   Future<void> _loadDailyCompletions() async {
     try {
-      // 過去30日分の完了状態を読み込み
+      // 今日の完了状態のみ読み込み
       final now = DateTime.now();
-      for (int i = 0; i < 30; i++) {
-        final date = now.subtract(Duration(days: i));
-        final dateKey = _getDateKey(date);
-        final completedIds =
-            await _taskRepository.getCompletedTaskIdsOnDate(date);
-        _dailyCompletions[dateKey] = completedIds.toSet();
-      }
-
-      // 未来30日分も読み込み
-      for (int i = 1; i <= 30; i++) {
-        final date = now.add(Duration(days: i));
-        final dateKey = _getDateKey(date);
-        final completedIds =
-            await _taskRepository.getCompletedTaskIdsOnDate(date);
-        _dailyCompletions[dateKey] = completedIds.toSet();
-      }
+      final dateKey = _getDateKey(now);
+      final completedIds = await _taskRepository.getCompletedTaskIdsOnDate(now);
+      _dailyCompletions[dateKey] = completedIds.toSet();
 
       notifyListeners();
     } catch (e) {

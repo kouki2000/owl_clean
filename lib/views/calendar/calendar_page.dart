@@ -27,6 +27,13 @@ class _CalendarPageState extends State<CalendarPage>
     super.initState();
     _selectedDay = _focusedDay;
     _tabController = TabController(length: 2, vsync: this);
+
+    // タブ切り替え時に再描画
+    _tabController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -113,6 +120,9 @@ class _CalendarPageState extends State<CalendarPage>
   Widget _buildCalendar() {
     return Consumer<CalendarViewModel>(
       builder: (context, viewModel, child) {
+        // 現在のタブがゴミ出しタブかどうか
+        final isGarbageTab = _tabController.index == 1;
+
         return Container(
           decoration: const BoxDecoration(
             border:
@@ -172,15 +182,16 @@ class _CalendarPageState extends State<CalendarPage>
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
               });
-              // 選択日が変わったら完了状態を再読み込み
               context.read<CalendarViewModel>().selectDate(selectedDay);
             },
             onPageChanged: (focusedDay) {
               _focusedDay = focusedDay;
             },
-            // タスクがある日にマーカーを表示
+            // タスクがある日にマーカーを表示（タブに応じて）
             eventLoader: (day) {
-              return viewModel.hasEventsOnDay(day) ? ['event'] : [];
+              return viewModel.hasEventsOnDay(day, isGarbageTab: isGarbageTab)
+                  ? ['event']
+                  : [];
             },
           ),
         );
@@ -196,7 +207,14 @@ class _CalendarPageState extends State<CalendarPage>
 
     return Consumer<CalendarViewModel>(
       builder: (context, viewModel, child) {
-        final tasksForSelectedDay = viewModel.getTasksForDay(_selectedDay!);
+        // 現在のタブがゴミ出しタブかどうか
+        final isGarbageTab = _tabController.index == 1;
+
+        // タブに応じてタスクを取得
+        final tasksForSelectedDay = viewModel.getTasksForDay(
+          _selectedDay!,
+          isGarbageTab: isGarbageTab,
+        );
 
         return Column(
           children: [
@@ -229,8 +247,8 @@ class _CalendarPageState extends State<CalendarPage>
                     padding: const EdgeInsets.all(AppSpacing.xxl),
                     child: Column(
                       children: [
-                        const Text('📅', style: TextStyle(fontSize: 48)),
-                        const SizedBox(height: AppSpacing.md),
+                        // const Text('📅', style: TextStyle(fontSize: 48)),
+                        // const SizedBox(height: AppSpacing.md),
                         Text(
                           'この日のタスクはありません',
                           style: AppTextStyles.body.copyWith(
@@ -400,27 +418,19 @@ class _CalendarPageState extends State<CalendarPage>
         text = '毎日';
         icon = Icons.refresh;
         color = AppColors.accent;
-        break;
       case RepeatType.weekly:
         text = '毎週';
         icon = Icons.calendar_today;
         color = Colors.blue;
-        break;
       case RepeatType.monthly:
         text = '毎月';
         icon = Icons.calendar_month;
         color = Colors.purple;
-        break;
       case RepeatType.none:
-        text = '1回のみ';
-        icon = Icons.event;
-        color = AppColors.gray400;
-        break;
       default:
         text = '1回のみ';
         icon = Icons.event;
         color = AppColors.gray400;
-        break;
     }
 
     return Container(
