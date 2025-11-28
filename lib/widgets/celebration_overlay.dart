@@ -71,14 +71,6 @@ class _CelebrationOverlayState extends State<CelebrationOverlay>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // 祝福メッセージ
-                    Text(
-                      '🎉',
-                      style: TextStyle(
-                        fontSize: 60,
-                        height: 1.2,
-                      ),
-                    ),
                     const SizedBox(height: AppSpacing.lg),
                     Text(
                       '今日のタスク完了！',
