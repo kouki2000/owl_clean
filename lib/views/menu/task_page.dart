@@ -159,7 +159,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
               TextButton(
                 onPressed: () => _navigateToTaskDetail(),
                 child: Text(
-                  '自由入力',
+                  '新規タスク追加',
                   style: AppTextStyles.body.copyWith(
                     color: AppColors.accent,
                     fontWeight: FontWeight.w400,

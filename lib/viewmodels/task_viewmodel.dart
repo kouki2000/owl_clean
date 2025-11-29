@@ -239,16 +239,6 @@ class TaskViewModel extends ChangeNotifier {
     }
   }
 
-  /// サンプルデータを追加（開発用）
-  Future<void> addSampleData() async {
-    await addTask(
-        title: '床掃除', categoryId: 'living', repeatType: RepeatType.daily);
-    await addTask(
-        title: '窓拭き', categoryId: 'living', repeatType: RepeatType.weekly);
-    await addTask(
-        title: 'トイレ掃除', categoryId: 'toilet', repeatType: RepeatType.daily);
-  }
-
   String _getDateKey(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
