@@ -8,6 +8,7 @@ import '../../widgets/task_card.dart';
 import '../../widgets/floating_balloon.dart';
 import '../../viewmodels/task_viewmodel.dart';
 import '../../widgets/celebration_overlay.dart';
+import '../../viewmodels/calendar_viewmodel.dart';
 
 /// ホーム画面
 class HomePage extends StatefulWidget {
@@ -23,14 +24,21 @@ class _HomePageState extends State<HomePage> {
 
   void _toggleTask(String id) async {
     final viewModel = context.read<TaskViewModel>();
+    final calendarViewModel = context.read<CalendarViewModel>();
+
     final task = viewModel.tasks.firstWhere((t) => t.id == id);
 
+    // 完了する前に風船を割る
     if (!task.isCompleted && _balloonKeys.containsKey(id)) {
       _balloonKeys[id]?.currentState?.pop();
       await Future.delayed(const Duration(milliseconds: 400));
     }
 
+    // タスクの完了状態を切り替え
     await viewModel.toggleTaskCompletion(id, DateTime.now());
+
+    // カレンダーViewModelもリロード
+    await calendarViewModel.loadTasks(); // ⚠️ 追加
   }
 
   Future<void> _deleteTask(String id, String title) async {
@@ -171,7 +179,7 @@ class _HomePageState extends State<HomePage> {
                           child: Row(
                             children: [
                               Text(
-                                "Today's Focus".toUpperCase(),
+                                '今日の予定',
                                 style: AppTextStyles.label,
                               ),
                             ],
@@ -320,13 +328,9 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Row(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(AppConstants.appName, style: AppTextStyles.h1),
-              const SizedBox(height: 4),
-              Text(AppConstants.appSubtitle, style: AppTextStyles.caption),
-            ],
+          Text(
+            AppConstants.appName,
+            style: AppTextStyles.h1,
           ),
         ],
       ),

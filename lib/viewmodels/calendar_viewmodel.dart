@@ -1,57 +1,125 @@
 import 'package:flutter/foundation.dart';
 import '../models/task.dart';
-import '../models/garbage_schedule.dart';
 import '../repositories/task_repository.dart';
-import '../services/database_service.dart';
 
-/// カレンダーViewModel
 class CalendarViewModel extends ChangeNotifier {
-  final TaskRepository _taskRepository = TaskRepository();
-  final DatabaseService _dbService = DatabaseService.instance;
-
-  DateTime _selectedDate = DateTime.now();
-  DateTime _focusedDate = DateTime.now();
+  final TaskRepository _repository = TaskRepository();
 
   List<Task> _tasks = [];
   Map<String, Set<String>> _dailyCompletions = {}; // 日付 -> 完了タスクIDセット
-  List<GarbageSchedule> _garbageSchedules = [];
+  DateTime? _selectedDate;
   bool _isLoading = false;
   String? _error;
 
-  // Getters
-  DateTime get selectedDate => _selectedDate;
-  DateTime get focusedDate => _focusedDate;
   List<Task> get tasks => _tasks;
-  List<GarbageSchedule> get garbageSchedules => _garbageSchedules;
+  DateTime? get selectedDate => _selectedDate;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  /// 選択された日付のタスクを取得（タブでフィルタリング）
-  List<Task> getTasksForDay(DateTime day, {bool isGarbageTab = false}) {
-    final dayOnly = DateTime(day.year, day.month, day.day);
-    final dateKey = _getDateKey(dayOnly);
+  /// 初期化
+  Future<void> initialize() async {
+    await loadTasks();
+  }
+
+  /// タスク一覧を読み込み
+  Future<void> loadTasks() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _tasks = await _repository.getAllTasks(); // ⚠️ getTasks() → getAllTasks()
+
+      // 今日の日次完了状態を読み込む
+      final today = DateTime.now();
+      await _loadDailyCompletionsForDate(today);
+
+      _error = null;
+    } catch (e) {
+      _error = 'タスクの読み込みに失敗しました';
+      debugPrint('Error loading tasks: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// 指定日の日次完了状態を読み込む
+  Future<void> _loadDailyCompletionsForDate(DateTime date) async {
+    try {
+      final dateKey = _getDateKey(date);
+      final completedIds = await _repository.getCompletedTaskIdsOnDate(
+          date); // ⚠️ getDailyCompletions() → getCompletedTaskIdsOnDate()
+      _dailyCompletions[dateKey] = completedIds.toSet();
+    } catch (e) {
+      debugPrint('Error loading daily completions: $e');
+    }
+  }
+
+  /// 日付キーを生成
+  String _getDateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  /// 指定日にタスクが表示されるべきかチェック
+  bool _isTaskVisibleOnDate(Task task, DateTime date) {
+    final taskDate = task.createdAt;
+    final taskDateOnly = DateTime(taskDate.year, taskDate.month, taskDate.day);
+
+    // タスク作成日より前の日付では表示しない
+    if (date.isBefore(taskDateOnly)) return false;
+
+    // 繰り返し設定に基づいて判定
+    switch (task.repeatType) {
+      case RepeatType.none:
+        return date.year == taskDate.year &&
+            date.month == taskDate.month &&
+            date.day == taskDate.day;
+
+      case RepeatType.daily:
+        return true;
+
+      case RepeatType.weekly:
+        return date.weekday == taskDate.weekday;
+
+      case RepeatType.monthly:
+        return date.day == taskDate.day;
+    }
+  }
+
+  /// 特定の日のタスクを取得（日次完了状態を反映）
+  Future<List<Task>> getTasksForDay(DateTime date,
+      {bool isGarbageTab = false}) async {
+    // 指定日の日次完了状態を読み込む
+    await _loadDailyCompletionsForDate(date);
+
+    final dateKey = _getDateKey(date);
     final completedIds = _dailyCompletions[dateKey] ?? {};
 
-    return _tasks.where((task) {
-      // タブに応じてフィルタリング
+    // フィルタリング
+    final filteredTasks = _tasks.where((task) {
+      // ゴミ出しタブかどうかでフィルタ
       if (isGarbageTab) {
-        // ゴミ出しタブ：categoryId = 'garbage' のみ
         if (task.categoryId != 'garbage') return false;
       } else {
-        // 掃除タブ：categoryId != 'garbage' のみ
         if (task.categoryId == 'garbage') return false;
       }
 
-      return _isTaskVisibleOnDate(task, dayOnly);
-    }).map((task) {
-      // 日次完了状態を反映したTaskを返す
+      // 指定日に表示されるべきかチェック
+      return _isTaskVisibleOnDate(task, date);
+    }).toList();
+
+    // 日次完了状態を反映した新しいTaskオブジェクトを作成
+    return filteredTasks.map((task) {
+      final isCompletedToday = completedIds.contains(task.id);
+
       return Task(
         id: task.id,
         title: task.title,
         categoryId: task.categoryId,
-        isCompleted: completedIds.contains(task.id),
-        completedDate: task.completedDate,
-        progress: completedIds.contains(task.id) ? 100 : 0,
+        isCompleted: isCompletedToday,
+        completedDate: isCompletedToday ? date : null,
+        progress: task.progress,
         repeatType: task.repeatType,
         repeatValue: task.repeatValue,
         notificationTime: task.notificationTime,
@@ -61,90 +129,18 @@ class CalendarViewModel extends ChangeNotifier {
     }).toList();
   }
 
-  /// 選択された日付のゴミ出しスケジュールを取得
-  List<GarbageSchedule> getGarbageSchedulesForDay(DateTime day) {
-    final dayOfWeek = day.weekday % 7;
-    return _garbageSchedules
-        .where((schedule) => schedule.dayOfWeek == dayOfWeek)
-        .toList();
-  }
-
-  /// 指定した日にタスクやゴミ出しがあるかチェック（カレンダーのマーカー用）
+  /// 指定日にイベント（タスク）があるかチェック
   bool hasEventsOnDay(DateTime day, {bool isGarbageTab = false}) {
-    final hasTasks = getTasksForDay(day, isGarbageTab: isGarbageTab).isNotEmpty;
-    return hasTasks;
-  }
+    return _tasks.any((task) {
+      // ゴミ出しタブかどうかでフィルタ
+      if (isGarbageTab) {
+        if (task.categoryId != 'garbage') return false;
+      } else {
+        if (task.categoryId == 'garbage') return false;
+      }
 
-  /// タスクが指定した日付に表示されるべきかチェック
-  bool _isTaskVisibleOnDate(Task task, DateTime day) {
-    final taskDate = task.createdAt;
-    final taskDateOnly = DateTime(taskDate.year, taskDate.month, taskDate.day);
-
-    if (day.isBefore(taskDateOnly)) return false;
-
-    switch (task.repeatType) {
-      case RepeatType.daily:
-        return true;
-      case RepeatType.weekly:
-        return day.weekday == taskDate.weekday;
-      case RepeatType.monthly:
-        return day.day == taskDate.day;
-      case RepeatType.none:
-        return day.year == taskDate.year &&
-            day.month == taskDate.month &&
-            day.day == taskDate.day;
-    }
-  }
-
-  /// 初期化
-  Future<void> initialize() async {
-    await loadTasks();
-    await _loadDailyCompletions();
-    await loadGarbageSchedules();
-  }
-
-  /// タスクを読み込み
-  Future<void> loadTasks() async {
-    _setLoading(true);
-    _error = null;
-
-    try {
-      _tasks = await _taskRepository.getAllTasks();
-      notifyListeners();
-    } catch (e) {
-      _error = 'タスクの読み込みに失敗しました: $e';
-      debugPrint(_error);
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// 日次完了状態を読み込み
-  Future<void> _loadDailyCompletions() async {
-    try {
-      // 今日の完了状態のみ読み込み
-      final now = DateTime.now();
-      final dateKey = _getDateKey(now);
-      final completedIds = await _taskRepository.getCompletedTaskIdsOnDate(now);
-      _dailyCompletions[dateKey] = completedIds.toSet();
-
-      notifyListeners();
-    } catch (e) {
-      debugPrint('日次完了状態の読み込みに失敗しました: $e');
-    }
-  }
-
-  /// ゴミ出しスケジュールを読み込み
-  Future<void> loadGarbageSchedules() async {
-    _error = null;
-
-    try {
-      _garbageSchedules = await _dbService.getGarbageSchedules();
-      notifyListeners();
-    } catch (e) {
-      _error = 'ゴミ出しスケジュールの読み込みに失敗しました: $e';
-      debugPrint(_error);
-    }
+      return _isTaskVisibleOnDate(task, day);
+    });
   }
 
   /// 日付を選択
@@ -153,97 +149,25 @@ class CalendarViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// フォーカス日付を変更
-  void updateFocusedDate(DateTime date) {
-    _focusedDate = date;
-    notifyListeners();
-  }
-
-  /// タスクを完了/未完了にする（日次）
-  Future<void> toggleTaskCompletion(String id, [DateTime? date]) async {
-    _error = null;
-    final targetDate = date ?? _selectedDate;
-    final dateKey = _getDateKey(targetDate);
-
+  /// タスクの完了状態を切り替え（日次完了）
+  Future<void> toggleTaskCompletion(String taskId, DateTime date) async {
     try {
-      await _taskRepository.toggleTaskCompletionOnDate(id, targetDate);
+      await _repository.toggleTaskCompletionOnDate(taskId, date); // ⚠️ 正しいメソッド名
 
       // ローカル状態を更新
+      final dateKey = _getDateKey(date);
       _dailyCompletions[dateKey] ??= {};
-      if (_dailyCompletions[dateKey]!.contains(id)) {
-        _dailyCompletions[dateKey]!.remove(id);
+      if (_dailyCompletions[dateKey]!.contains(taskId)) {
+        _dailyCompletions[dateKey]!.remove(taskId);
       } else {
-        _dailyCompletions[dateKey]!.add(id);
+        _dailyCompletions[dateKey]!.add(taskId);
       }
 
       notifyListeners();
     } catch (e) {
-      _error = 'タスクの完了状態の変更に失敗しました: $e';
-      debugPrint(_error);
+      _error = 'タスクの更新に失敗しました';
+      debugPrint('Error toggling task completion: $e');
+      notifyListeners();
     }
-  }
-
-  /// ゴミ出しスケジュールを追加
-  Future<void> addGarbageSchedule({
-    required String garbageType,
-    required int dayOfWeek,
-    DateTime? notificationTime,
-  }) async {
-    _error = null;
-
-    try {
-      final schedule = GarbageSchedule(
-        id: 'garbage_${DateTime.now().millisecondsSinceEpoch}',
-        garbageType: garbageType,
-        dayOfWeek: dayOfWeek,
-        notificationTime: notificationTime,
-        createdAt: DateTime.now(),
-      );
-
-      await _dbService.insertGarbageSchedule(schedule);
-      await loadGarbageSchedules();
-    } catch (e) {
-      _error = 'ゴミ出しスケジュールの追加に失敗しました: $e';
-      debugPrint(_error);
-    }
-  }
-
-  /// ゴミ出しスケジュールを削除
-  Future<void> deleteGarbageSchedule(String id) async {
-    _error = null;
-
-    try {
-      await _dbService.deleteGarbageSchedule(id);
-      await loadGarbageSchedules();
-    } catch (e) {
-      _error = 'ゴミ出しスケジュールの削除に失敗しました: $e';
-      debugPrint(_error);
-    }
-  }
-
-  /// サンプルゴミ出しスケジュールを追加（開発用）
-  Future<void> addSampleGarbageSchedules() async {
-    await addGarbageSchedule(
-      garbageType: GarbageTypes.burnable,
-      dayOfWeek: 2, // 火曜日
-    );
-    await addGarbageSchedule(
-      garbageType: GarbageTypes.burnable,
-      dayOfWeek: 5, // 金曜日
-    );
-    await addGarbageSchedule(
-      garbageType: GarbageTypes.recyclable,
-      dayOfWeek: 3, // 水曜日
-    );
-  }
-
-  String _getDateKey(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-
-  /// ローディング状態を設定
-  void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
   }
 }

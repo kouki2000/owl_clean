@@ -157,7 +157,6 @@ class _PlaceholderPage extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('🦉', style: TextStyle(fontSize: 64)),
                     const SizedBox(height: AppSpacing.lg),
                     Text('${title}画面', style: AppTextStyles.h2),
                     const SizedBox(height: AppSpacing.sm),
