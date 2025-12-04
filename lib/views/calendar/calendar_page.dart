@@ -307,7 +307,6 @@ class _CalendarPageState extends State<CalendarPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('✨', style: TextStyle(fontSize: 48)),
           const SizedBox(height: AppSpacing.md),
           Text(
             '${_selectedDay.month}月${_selectedDay.day}日のタスクはありません',

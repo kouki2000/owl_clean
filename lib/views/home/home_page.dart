@@ -194,7 +194,6 @@ class _HomePageState extends State<HomePage> {
                             padding: const EdgeInsets.all(AppSpacing.xxl),
                             child: Column(
                               children: [
-                                const Text('✨', style: TextStyle(fontSize: 48)),
                                 const SizedBox(height: AppSpacing.md),
                                 Text(
                                   '今日のタスクはありません',

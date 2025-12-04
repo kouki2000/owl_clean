@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/cupertino.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../viewmodels/task_viewmodel.dart';
@@ -612,23 +613,145 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
   Widget _buildNotificationTimeSelector() {
     return GestureDetector(
       onTap: () async {
-        final picked = await showTimePicker(
+        // 現在の時刻または選択済み時刻を初期値に
+        final initialTime = _notificationTime ?? TimeOfDay.now();
+
+        // 分を5分刻みに丸める
+        final initialMinute = (initialTime.minute / 5).round() * 5;
+        int selectedHour = initialTime.hour;
+        int selectedMinute = initialMinute;
+
+        await showCupertinoModalPopup(
           context: context,
-          initialTime: _notificationTime ?? TimeOfDay.now(),
-          builder: (context, child) {
-            return MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                alwaysUse24HourFormat: false,
+          builder: (BuildContext context) {
+            return Container(
+              height: 300,
+              color: Colors.white,
+              child: Column(
+                children: [
+                  // ヘッダー
+                  Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        bottom: BorderSide(color: AppColors.border),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        CupertinoButton(
+                          child: Text(
+                            'キャンセル',
+                            style: TextStyle(color: AppColors.gray600),
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                        // ⚠️ 中央のタイトルを削除
+                        const SizedBox(width: 60), // スペーサー
+                        CupertinoButton(
+                          child: Text(
+                            '完了',
+                            style: TextStyle(
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _notificationTime = TimeOfDay(
+                                hour: selectedHour,
+                                minute: selectedMinute,
+                              );
+                            });
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  // ピッカー
+                  Expanded(
+                    child: Row(
+                      children: [
+                        // 時間ピッカー
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: FixedExtentScrollController(
+                              initialItem: selectedHour,
+                            ),
+                            itemExtent: 40,
+                            onSelectedItemChanged: (int index) {
+                              selectedHour = index;
+                            },
+                            children: List.generate(24, (index) {
+                              return Center(
+                                child: Text(
+                                  '$index',
+                                  style: TextStyle(fontSize: 24),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                        // "時"ラベル ⚠️ 「時間」から「時」に変更
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            '時',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.black,
+                              decoration: TextDecoration.none,
+                            ),
+                          ),
+                        ),
+                        // 分ピッカー
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: FixedExtentScrollController(
+                              initialItem: selectedMinute ~/ 5,
+                            ),
+                            itemExtent: 40,
+                            onSelectedItemChanged: (int index) {
+                              selectedMinute = index * 5;
+                            },
+                            children: List.generate(12, (index) {
+                              final minute = index * 5;
+                              return Center(
+                                child: Text(
+                                  minute.toString().padLeft(2, '0'),
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    color: Colors.black,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                        // "分"ラベル ⚠️ 赤くない普通の色
+                        Padding(
+                          padding: const EdgeInsets.only(right: 16, left: 8),
+                          child: Text(
+                            '分',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.black,
+                              decoration: TextDecoration.none,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              child: child!,
             );
           },
         );
-        if (picked != null) {
-          setState(() {
-            _notificationTime = picked;
-          });
-        }
       },
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
