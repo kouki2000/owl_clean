@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'app.dart';
 import 'views/splash_screen.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,6 +12,8 @@ void main() async {
   // 日本語のロケールを初期化
   await initializeDateFormatting('ja_JP');
   Intl.defaultLocale = 'ja_JP';
+
+  await NotificationService().initialize();
 
   runApp(const MyApp());
 }

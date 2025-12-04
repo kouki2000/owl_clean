@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../viewmodels/task_viewmodel.dart';
+import '../../viewmodels/calendar_viewmodel.dart';
 import '../../models/task.dart';
 
 class TaskDetailPage extends StatefulWidget {
@@ -28,6 +29,8 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
   Set<int> _selectedMonthDays = {};
   DateTime _startDate = DateTime.now();
   String? _selectedCategoryId;
+  TimeOfDay? _notificationTime;
+  DateTime? _endDate;
 
   // カテゴリ定義
   final List<Map<String, dynamic>> _categories = [
@@ -69,14 +72,38 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       repeatValue = _selectedMonthDays.join(',');
     }
 
-    final viewModel = context.read<TaskViewModel>();
-    await viewModel.addTask(
+    // 通知時間をDateTimeに変換
+    DateTime? notificationDateTime;
+    if (_notificationTime != null) {
+      notificationDateTime = DateTime(
+        _startDate.year,
+        _startDate.month,
+        _startDate.day,
+        _notificationTime!.hour,
+        _notificationTime!.minute,
+      );
+    }
+
+    // 終了日の設定（繰り返しタスクの場合）
+    DateTime? finalEndDate;
+    if (_repeatType != RepeatType.none) {
+      finalEndDate = _endDate ?? _startDate.add(const Duration(days: 30));
+    }
+
+    final taskViewModel = context.read<TaskViewModel>();
+    final calendarViewModel = context.read<CalendarViewModel>();
+
+    await taskViewModel.addTask(
       title: _taskNameController.text.trim(),
       categoryId: _selectedCategoryId,
       repeatType: _repeatType,
       repeatValue: repeatValue,
       createdAt: _startDate,
+      notificationTime: notificationDateTime,
+      endDate: finalEndDate,
     );
+
+    await calendarViewModel.loadTasks();
 
     if (mounted) {
       Navigator.of(context).pop();
@@ -107,6 +134,8 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
         return '毎日';
       case RepeatType.weekly:
         return '毎週';
+      case RepeatType.biweekly:
+        return '隔週';
       case RepeatType.monthly:
         return '毎月';
     }
@@ -120,6 +149,8 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
         return Icons.refresh;
       case RepeatType.weekly:
         return Icons.calendar_view_week;
+      case RepeatType.biweekly:
+        return Icons.calendar_today;
       case RepeatType.monthly:
         return Icons.calendar_month;
     }
@@ -241,6 +272,21 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                       const SizedBox(height: AppSpacing.lg),
                       _buildMonthDaySelector(),
                     ],
+
+                    // 終了日（繰り返しタスクの場合のみ）
+                    if (_repeatType != RepeatType.none) ...[
+                      const SizedBox(height: AppSpacing.xxl),
+                      Text('終了日（オプション）', style: AppTextStyles.label),
+                      const SizedBox(height: AppSpacing.sm),
+                      _buildEndDateSelector(),
+                    ],
+
+                    const SizedBox(height: AppSpacing.xxl),
+
+                    // 通知時間
+                    Text('通知時間（オプション）', style: AppTextStyles.label),
+                    const SizedBox(height: AppSpacing.sm),
+                    _buildNotificationTimeSelector(),
                   ],
                 ),
               ),
@@ -467,7 +513,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           context: context,
           initialDate: _startDate,
           firstDate: DateTime(2020),
-          lastDate: DateTime(2030),
+          lastDate: DateTime(DateTime.now().year + 10),
           locale: const Locale('ja', 'JP'),
         );
         if (picked != null) {
@@ -493,6 +539,135 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             ),
             const Spacer(),
             const Icon(Icons.chevron_right, color: AppColors.gray400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEndDateSelector() {
+    final defaultEndDate = _startDate.add(const Duration(days: 30));
+    final maxEndDate = _startDate.add(const Duration(days: 365));
+    final displayEndDate = _endDate ?? defaultEndDate;
+
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: displayEndDate,
+          firstDate: _startDate,
+          lastDate: maxEndDate,
+          locale: const Locale('ja', 'JP'),
+        );
+        if (picked != null) {
+          setState(() {
+            _endDate = picked;
+          });
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              _endDate != null ? Icons.event : Icons.event_available,
+              color: AppColors.gray600,
+              size: 20,
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Text(
+              _endDate != null
+                  ? '${_endDate!.year}年${_endDate!.month}月${_endDate!.day}日(${_getWeekdayName(_endDate!.weekday)})'
+                  : '1ヶ月後（${displayEndDate.year}年${displayEndDate.month}月${displayEndDate.day}日）',
+              style: AppTextStyles.body.copyWith(
+                color: _endDate != null ? AppColors.gray800 : AppColors.gray400,
+              ),
+            ),
+            const Spacer(),
+            if (_endDate != null)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _endDate = null;
+                  });
+                },
+                child: const Icon(
+                  Icons.close,
+                  color: AppColors.gray400,
+                  size: 20,
+                ),
+              )
+            else
+              const Icon(Icons.chevron_right, color: AppColors.gray400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationTimeSelector() {
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: _notificationTime ?? TimeOfDay.now(),
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                alwaysUse24HourFormat: false,
+              ),
+              child: child!,
+            );
+          },
+        );
+        if (picked != null) {
+          setState(() {
+            _notificationTime = picked;
+          });
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              _notificationTime != null
+                  ? Icons.notifications_active
+                  : Icons.notifications_none,
+              color: AppColors.gray600,
+              size: 20,
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Text(
+              _notificationTime != null
+                  ? '${_notificationTime!.hour}:${_notificationTime!.minute.toString().padLeft(2, '0')}'
+                  : '通知なし',
+              style: AppTextStyles.body,
+            ),
+            const Spacer(),
+            if (_notificationTime != null)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _notificationTime = null;
+                  });
+                },
+                child: const Icon(
+                  Icons.close,
+                  color: AppColors.gray400,
+                  size: 20,
+                ),
+              )
+            else
+              const Icon(Icons.chevron_right, color: AppColors.gray400),
           ],
         ),
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/task.dart';
 import '../repositories/task_repository.dart';
+import '../services/notification_service.dart';
 
 /// タスクViewModel
 ///
@@ -51,6 +52,7 @@ class TaskViewModel extends ChangeNotifier {
         notificationTime: task.notificationTime,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt,
+        endDate: task.endDate,
       );
     }).toList();
   }
@@ -63,11 +65,21 @@ class TaskViewModel extends ChangeNotifier {
     // タスク作成日より前の日付には表示しない
     if (date.isBefore(taskDateOnly)) return false;
 
+    // 終了日チェック
+    if (task.endDate != null) {
+      final endDateOnly =
+          DateTime(task.endDate!.year, task.endDate!.month, task.endDate!.day);
+      if (date.isAfter(endDateOnly)) return false;
+    }
+
     switch (task.repeatType) {
       case RepeatType.daily:
         return true;
       case RepeatType.weekly:
         return date.weekday == taskDate.weekday;
+      case RepeatType.biweekly:
+        final daysDifference = date.difference(taskDateOnly).inDays;
+        return daysDifference % 14 == 0;
       case RepeatType.monthly:
         return date.day == taskDate.day;
       case RepeatType.none:
@@ -133,6 +145,7 @@ class TaskViewModel extends ChangeNotifier {
     String? repeatValue,
     DateTime? notificationTime,
     DateTime? createdAt,
+    DateTime? endDate,
   }) async {
     _setLoading(true);
     _error = null;
@@ -145,9 +158,22 @@ class TaskViewModel extends ChangeNotifier {
         repeatValue: repeatValue,
         notificationTime: notificationTime,
         createdAt: createdAt,
+        endDate: endDate,
       );
 
       _tasks.insert(0, task);
+
+      // 通知をスケジュール
+      if (notificationTime != null) {
+        await NotificationService().scheduleTaskNotification(
+          taskId: task.id,
+          taskTitle: task.title,
+          notificationTime: notificationTime,
+          repeatType: task.repeatType,
+          endDate: task.endDate,
+        );
+      }
+
       notifyListeners();
     } catch (e) {
       _error = 'タスクの追加に失敗しました: $e';
@@ -181,6 +207,10 @@ class TaskViewModel extends ChangeNotifier {
     try {
       await _repository.deleteTask(id);
       _tasks.removeWhere((task) => task.id == id);
+
+      // 通知をキャンセル
+      await NotificationService().cancelTaskNotification(id);
+
       await loadStats();
       notifyListeners();
     } catch (e) {

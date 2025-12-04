@@ -13,6 +13,7 @@ class Task {
   final DateTime? notificationTime;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? endDate; // 終了日
 
   Task({
     required this.id,
@@ -26,6 +27,7 @@ class Task {
     this.notificationTime,
     required this.createdAt,
     required this.updatedAt,
+    this.endDate,
   });
 
   /// データベースのMapからTaskオブジェクトを生成
@@ -49,6 +51,9 @@ class Task {
           : null,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
+      endDate: map['end_date'] != null
+          ? DateTime.parse(map['end_date'] as String)
+          : null,
     );
   }
 
@@ -66,6 +71,7 @@ class Task {
       'notification_time': notificationTime?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'end_date': endDate?.toIso8601String(),
     };
   }
 
@@ -82,6 +88,7 @@ class Task {
     DateTime? notificationTime,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? endDate,
   }) {
     return Task(
       id: id ?? this.id,
@@ -95,6 +102,7 @@ class Task {
       notificationTime: notificationTime ?? this.notificationTime,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      endDate: endDate ?? this.endDate,
     );
   }
 
@@ -123,6 +131,13 @@ class Task {
         // repeatValueにJSON形式で曜日情報が入っている想定
         // 例: "[1,3,5]" → 月、水、金
         return true; // 簡易実装、後で詳細化
+      case RepeatType.biweekly:
+        // 隔週判定
+        final taskDateOnly =
+            DateTime(createdAt.year, createdAt.month, createdAt.day);
+        final today = DateTime(now.year, now.month, now.day);
+        final daysDifference = today.difference(taskDateOnly).inDays;
+        return daysDifference % 14 == 0;
       case RepeatType.monthly:
         // repeatValueに日付情報が入っている想定
         return true; // 簡易実装、後で詳細化
@@ -152,5 +167,6 @@ enum RepeatType {
   none, // 繰り返しなし
   daily, // 毎日
   weekly, // 毎週
+  biweekly, // 隔週（2週間に1回）
   monthly, // 毎月
 }

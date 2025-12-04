@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:owl_clean/viewmodels/calendar_viewmodel.dart';
 import 'package:provider/provider.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
@@ -342,6 +343,8 @@ class _AddTaskPageState extends State<AddTaskPage>
         return '毎日';
       case RepeatType.weekly:
         return '毎週';
+      case RepeatType.biweekly: // ⚠️ 追加
+        return '隔週';
       case RepeatType.monthly:
         return '毎月';
     }
@@ -389,8 +392,11 @@ class _AddTaskPageState extends State<AddTaskPage>
     );
 
     if (confirmed == true && mounted) {
-      final viewModel = context.read<TaskViewModel>();
-      await viewModel.deleteTask(task.id);
+      final taskViewModel = context.read<TaskViewModel>();
+      final calendarViewModel = context.read<CalendarViewModel>(); // ⚠️ 追加
+
+      await taskViewModel.deleteTask(task.id);
+      await calendarViewModel.loadTasks(); // ⚠️ カレンダーもリロード
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -440,8 +446,8 @@ class _AddTaskPageState extends State<AddTaskPage>
               child: Column(
                 children: [
                   Container(
-                    width: isSelected ? 56 : 48,
-                    height: isSelected ? 56 : 48,
+                    width: isSelected ? 64 : 56, // ⚠️ 大きく
+                    height: isSelected ? 64 : 56, // ⚠️ 大きく
                     decoration: BoxDecoration(
                       color: isSelected ? AppColors.gray800 : AppColors.gray200,
                       borderRadius: BorderRadius.circular(8),
@@ -449,7 +455,7 @@ class _AddTaskPageState extends State<AddTaskPage>
                     child: Icon(
                       icon,
                       color: isSelected ? AppColors.white : AppColors.gray600,
-                      size: isSelected ? 28 : 24,
+                      size: isSelected ? 32 : 28, // ⚠️ 大きく
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -613,6 +619,7 @@ class _AddTaskPageState extends State<AddTaskPage>
           name,
           style: AppTextStyles.body.copyWith(
             fontWeight: FontWeight.w400,
+            fontSize: 14, // ⚠️ 小さく
           ),
         ),
         trailing: Container(

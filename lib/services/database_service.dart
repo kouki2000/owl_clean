@@ -24,7 +24,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3, // バージョンを3に上げる
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -44,7 +44,8 @@ class DatabaseService {
         repeat_value TEXT,
         notification_time TEXT,
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        end_date TEXT
       )
     ''');
 
@@ -106,6 +107,11 @@ class DatabaseService {
           created_at TEXT NOT NULL
         )
       ''');
+    }
+
+    if (oldVersion < 3) {
+      // end_dateカラムを追加
+      await db.execute('ALTER TABLE tasks ADD COLUMN end_date TEXT');
     }
   }
 
